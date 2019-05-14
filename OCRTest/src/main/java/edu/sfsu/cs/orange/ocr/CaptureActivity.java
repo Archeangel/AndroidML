@@ -414,7 +414,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       handleOcrDecode(lastResult);
     } else {
       Toast toast = Toast.makeText(this, "OCR failed. Please try again."
-        + "Battery lvl:" +getBatteryPercentage(), Toast.LENGTH_LONG);
+        + "Battery lvl:" +getBatteryPercentage()
+              + "Battery capacity:" +getBatteryCapacity(), Toast.LENGTH_LONG);
         toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();
       resumeContinuousDecoding();
@@ -728,6 +729,31 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     return (int) (batteryPct * 100);
   }
+
+    public double getBatteryCapacity() {
+        Object mPowerProfile_ = null;
+        double batteryCapacity=0;
+        final String POWER_PROFILE_CLASS = "com.android.internal.os.PowerProfile";
+
+        try {
+            mPowerProfile_ = Class.forName(POWER_PROFILE_CLASS)
+                    .getConstructor(Context.class).newInstance(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            batteryCapacity = (Double) Class
+                    .forName(POWER_PROFILE_CLASS)
+                    .getMethod("getAveragePower", java.lang.String.class)
+                    .invoke(mPowerProfile_, "battery.capacity");
+            Toast.makeText(this, batteryCapacity + " mah",
+                    Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return batteryCapacity;
+    }
   /**
    * Displays information relating to the result of OCR, and requests a translation if necessary.
    * 
@@ -740,7 +766,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     // Test whether the result is null
     if (ocrResult.getText() == null || ocrResult.getText().equals("")) {
       Toast toast = Toast.makeText(this, "OCR failed. Please try again.\n"
-              + "Battery lvl:" +getBatteryPercentage(), Toast.LENGTH_SHORT);
+              + "Battery lvl:" +getBatteryPercentage()
+              + "Battery capacity:" +getBatteryCapacity(), Toast.LENGTH_LONG);
       toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();
       return false;

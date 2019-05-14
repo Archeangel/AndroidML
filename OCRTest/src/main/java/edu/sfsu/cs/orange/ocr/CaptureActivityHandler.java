@@ -118,7 +118,8 @@ final class CaptureActivityHandler extends Handler {
         state = State.PREVIEW;
         activity.setShutterButtonClickable(true);
         Toast toast = Toast.makeText(activity.getBaseContext(), "OCR failed. Please try again."
-                + "Battery lvl:" +activity.getBatteryPercentage(), Toast.LENGTH_LONG);
+                + "Battery lvl:" +activity.getBatteryPercentage()
+                + "Battery capacity:" +activity.getBatteryCapacity(), Toast.LENGTH_LONG);
 
         toast.setGravity(Gravity.TOP, 0, 0);
         toast.show();
