@@ -25,6 +25,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.PackageInfo;
@@ -34,6 +35,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -411,8 +413,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     if (lastResult != null) {
       handleOcrDecode(lastResult);
     } else {
-      Toast toast = Toast.makeText(this, "OCR failed. Please try again.", Toast.LENGTH_SHORT);
-      toast.setGravity(Gravity.TOP, 0, 0);
+      Toast toast = Toast.makeText(this, "OCR failed. Please try again."
+        + "Battery lvl:" +getBatteryPercentage(), Toast.LENGTH_LONG);
+        toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();
       resumeContinuousDecoding();
     }
@@ -712,7 +715,19 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     new OcrInitAsyncTask(this, baseApi, dialog, indeterminateDialog, languageCode, languageName, ocrEngineMode)
       .execute(storageRoot.toString());
   }
-  
+
+  public  int getBatteryPercentage() {
+
+    IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+    Intent batteryStatus = this.registerReceiver(null, iFilter);
+
+    int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
+    int scale = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1) : -1;
+
+    float batteryPct = level / (float) scale;
+
+    return (int) (batteryPct * 100);
+  }
   /**
    * Displays information relating to the result of OCR, and requests a translation if necessary.
    * 
@@ -724,7 +739,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     
     // Test whether the result is null
     if (ocrResult.getText() == null || ocrResult.getText().equals("")) {
-      Toast toast = Toast.makeText(this, "OCR failed. Please try again.", Toast.LENGTH_SHORT);
+      Toast toast = Toast.makeText(this, "OCR failed. Please try again.\n"
+              + "Battery lvl:" +getBatteryPercentage(), Toast.LENGTH_SHORT);
       toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();
       return false;
