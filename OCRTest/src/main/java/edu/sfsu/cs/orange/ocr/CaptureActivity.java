@@ -17,8 +17,11 @@
 
 package edu.sfsu.cs.orange.ocr;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -70,6 +73,10 @@ import edu.sfsu.cs.orange.ocr.camera.CameraManager;
 import edu.sfsu.cs.orange.ocr.camera.ShutterButton;
 import edu.sfsu.cs.orange.ocr.language.LanguageCodeHelper;
 import edu.sfsu.cs.orange.ocr.language.TranslateAsyncTask;
+import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
+import weka.core.Instances;
+import weka.filters.Filter;
 
 /**
  * This activity opens the camera and does the actual scanning on a background thread. It draws a
@@ -257,6 +264,41 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         return cameraManager;
     }
 
+    public void wekaTry(){
+        InputStream is = getResources().openRawResource(R.raw.ionosphere);
+        BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
+        try {
+            Instances m_Training = new Instances(datafile);
+            m_Training.setClassIndex(m_Training.numAttributes() - 1);
+            Filter m_Filter =
+                    ((Filter) Class.forName("weka.filters.unsupervised.instance.Randomize").newInstance());
+            m_Filter.setInputFormat(m_Training);
+            Instances localInstances = Filter.useFilter(m_Training, m_Filter);
+            Classifier m_Classifier;
+            m_Classifier = new weka.classifiers.trees.J48();
+            m_Classifier.buildClassifier(localInstances);
+            Evaluation m_Evaluation = new Evaluation(localInstances);
+
+            m_Evaluation.crossValidateModel(m_Classifier, localInstances, 10,
+                    m_Training.getRandomNumberGenerator(1L));
+            Log.e("Detail", m_Evaluation.toClassDetailsString());
+            Log.e("Summary", m_Evaluation.toSummaryString());
+
+            Log.e("Result", "================================================");
+            Log.e("Result", "Correct:"
+                    + m_Evaluation.correct()
+                    + "/Wrong:"
+                    + m_Evaluation.incorrect()
+                    + "/Correct(%):"
+                    + m_Evaluation.pctCorrect());
+            Log.e("Result", "================================================");
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        }
+    }
+
+
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -265,6 +307,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
         if (isFirstLaunch) {
             setDefaultPreferences();
+            System.out.println("Let's put here some code of Weka!");
+            wekaTry();
         }
 
         Window window = getWindow();
