@@ -19,6 +19,16 @@ package edu.sfsu.cs.orange.ocr;
 
 import edu.sfsu.cs.orange.ocr.BeepManager;
 
+import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.services.vision.v1.Vision;
+import com.google.api.services.vision.v1.VisionRequestInitializer;
+import com.google.api.services.vision.v1.model.AnnotateImageRequest;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesRequest;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
+import com.google.api.services.vision.v1.model.Feature;
+import com.google.api.services.vision.v1.model.Image;
+import com.google.api.services.vision.v1.model.TextAnnotation;
 import com.googlecode.leptonica.android.Pixa;
 import com.googlecode.leptonica.android.ReadFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
@@ -26,10 +36,16 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 import edu.sfsu.cs.orange.ocr.CaptureActivity;
 import edu.sfsu.cs.orange.ocr.R;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+import android.widget.ImageView;
+import android.widget.Toast;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Class to send bitmap data for OCR.
@@ -53,11 +69,58 @@ final class DecodeHandler extends Handler {
     beepManager.updatePrefs();
   }
 
+  private void performOcrWithGoogleVision(Message message) {
+    Vision.Builder visionBuilder = new Vision.Builder(
+            new NetHttpTransport(),
+            new AndroidJsonFactory(),
+            null);
+
+    visionBuilder.setVisionRequestInitializer(
+            new VisionRequestInitializer("AIzaSyBYIEPLoiD7p0ER5CnTiwNm5oQHRHAK6eE"));
+
+    Vision vision = visionBuilder.build();
+
+    Feature desiredFeature = new Feature();
+    desiredFeature.setType("TEXT_DETECTION");
+
+
+    AnnotateImageRequest request = new AnnotateImageRequest();
+
+
+
+    request.setImage(new Image().encodeContent((byte[])message.obj));
+    request.setFeatures(Arrays.asList(desiredFeature));
+
+    BatchAnnotateImagesRequest batchRequest = new BatchAnnotateImagesRequest();
+
+    batchRequest.setRequests(Arrays.asList(request));
+
+    BatchAnnotateImagesResponse batchResponse = null;
+
+    try {
+      batchResponse = vision.images().annotate(batchRequest).execute();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    if (batchResponse != null) {
+      final TextAnnotation text = batchResponse.getResponses()
+              .get(0).getFullTextAnnotation();
+      System.out.println(text);
+    }
+
+  }
+
+  private void performOcrWithAwsLambda(Message message) {
+    System.out.println("not yet");
+  }
+
   @Override
   public void handleMessage(Message message) {
     if (!running) {
       return;
     }
+
     switch (message.what) {        
     case R.id.ocr_continuous_decode:
       // Only request a decode if a request is not already pending.
@@ -68,6 +131,12 @@ final class DecodeHandler extends Handler {
       break;
     case R.id.ocr_decode:
       ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+      break;
+    case R.id.ocr_decode_google_vision:
+      performOcrWithGoogleVision(message);
+      break;
+    case R.id.ocr_decode_aws_lambda:
+      performOcrWithGoogleVision(message);
       break;
     case R.id.quit:
       running = false;

@@ -25,7 +25,20 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
+import android.widget.ImageView;
 import android.widget.Toast;
+
+import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.services.vision.v1.Vision;
+import com.google.api.services.vision.v1.VisionRequestInitializer;
+import com.google.api.services.vision.v1.model.AnnotateImageRequest;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesRequest;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
+import com.google.api.services.vision.v1.model.Feature;
+import com.google.api.services.vision.v1.model.TextAnnotation;
+
+import java.util.Arrays;
 
 /**
  * This class handles all the messaging which comprises the state machine for capture.
@@ -69,7 +82,7 @@ final class CaptureActivityHandler extends Handler {
       // Display a "be patient" message while first recognition request is running
       activity.setStatusViewForContinuous();
       
-      restartOcrPreviewAndDecode();
+        restartOcrPreviewAndDecode();
     } else {
       state = State.SUCCESS;
       
@@ -211,6 +224,8 @@ final class CaptureActivityHandler extends Handler {
   private void ocrDecode() {
     state = State.PREVIEW_PAUSED;
     cameraManager.requestOcrDecode(decodeThread.getHandler(), R.id.ocr_decode);
+//    cameraManager.requestOcrDecode(decodeThread.getHandler(), R.id.ocr_decode_google_vision);
+//    cameraManager.requestOcrDecode(decodeThread.getHandler(), R.id.ocr_decode_aws_lambda);
   }
   
   /**
@@ -229,7 +244,46 @@ final class CaptureActivityHandler extends Handler {
   void shutterButtonClick() {
     // Disable further clicks on this button until OCR request is finished
     activity.setShutterButtonClickable(false);
-    ocrDecode();
+
+  //    ImageView bitmapImageView = (ImageView) findViewById(R.id.image_view);
+  //
+  //
+  //    Vision.Builder visionBuilder = new Vision.Builder(
+  //            new NetHttpTransport(),
+  //            new AndroidJsonFactory(),
+  //            null);
+  //
+  //    visionBuilder.setVisionRequestInitializer(
+  //            new VisionRequestInitializer("AIzaSyBYIEPLoiD7p0ER5CnTiwNm5oQHRHAK6eE"));
+  //
+  //    Vision vision = visionBuilder.build();
+  //
+  //    Feature desiredFeature = new Feature();
+  //    desiredFeature.setType("TEXT_DETECTION");
+  //
+  //
+  //    AnnotateImageRequest request = new AnnotateImageRequest();
+  //    request.setImage();
+  //    request.setFeatures(Arrays.asList(desiredFeature));
+  //
+  //    BatchAnnotateImagesRequest batchRequest =
+  //            new BatchAnnotateImagesRequest();
+  //
+  //    batchRequest.setRequests(Arrays.asList(request));
+  //
+  //    BatchAnnotateImagesResponse batchResponse =
+  //            vision.images().annotate(batchRequest).execute();
+  //
+  //    final TextAnnotation text = batchResponse.getResponses()
+  //            .get(0).getFullTextAnnotation();
+  //
+  //    Toast.makeText(activity.getBaseContext(),
+  //            text.getText(), Toast.LENGTH_LONG).show();
+  //
+  //
+
+
+      ocrDecode();
   }
 
 }

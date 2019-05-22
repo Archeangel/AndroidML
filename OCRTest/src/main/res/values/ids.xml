@@ -24,6 +24,8 @@
   <item type="id" name="ocr_continuous_decode_failed"/>
   <item type="id" name="ocr_continuous_decode_succeeded"/>
   <item type="id" name="ocr_decode"/>
+  <item type="id" name="ocr_decode_google_vision"/>
+  <item type="id" name="ocr_decode_aws_lambda"/>
   <item type="id" name="ocr_decode_failed"/>
   <item type="id" name="ocr_decode_succeeded"/>
   
