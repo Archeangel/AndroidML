@@ -245,44 +245,6 @@ final class CaptureActivityHandler extends Handler {
     // Disable further clicks on this button until OCR request is finished
     activity.setShutterButtonClickable(false);
 
-  //    ImageView bitmapImageView = (ImageView) findViewById(R.id.image_view);
-  //
-  //
-  //    Vision.Builder visionBuilder = new Vision.Builder(
-  //            new NetHttpTransport(),
-  //            new AndroidJsonFactory(),
-  //            null);
-  //
-  //    visionBuilder.setVisionRequestInitializer(
-  //            new VisionRequestInitializer("AIzaSyBYIEPLoiD7p0ER5CnTiwNm5oQHRHAK6eE"));
-  //
-  //    Vision vision = visionBuilder.build();
-  //
-  //    Feature desiredFeature = new Feature();
-  //    desiredFeature.setType("TEXT_DETECTION");
-  //
-  //
-  //    AnnotateImageRequest request = new AnnotateImageRequest();
-  //    request.setImage();
-  //    request.setFeatures(Arrays.asList(desiredFeature));
-  //
-  //    BatchAnnotateImagesRequest batchRequest =
-  //            new BatchAnnotateImagesRequest();
-  //
-  //    batchRequest.setRequests(Arrays.asList(request));
-  //
-  //    BatchAnnotateImagesResponse batchResponse =
-  //            vision.images().annotate(batchRequest).execute();
-  //
-  //    final TextAnnotation text = batchResponse.getResponses()
-  //            .get(0).getFullTextAnnotation();
-  //
-  //    Toast.makeText(activity.getBaseContext(),
-  //            text.getText(), Toast.LENGTH_LONG).show();
-  //
-  //
-
-
       ocrDecode();
   }
 
