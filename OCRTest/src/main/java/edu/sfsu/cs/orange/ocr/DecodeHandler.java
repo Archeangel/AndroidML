@@ -41,6 +41,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+import android.view.Gravity;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -84,17 +85,13 @@ final class DecodeHandler extends Handler {
     Feature desiredFeature = new Feature();
     desiredFeature.setType("TEXT_DETECTION");
 
-
     AnnotateImageRequest request = new AnnotateImageRequest();
-
 
     Bitmap bitmap = activity.getCameraManager().buildLuminanceSource((byte[])message.obj, message.arg1, message.arg2).renderCroppedGreyscaleBitmap();
 
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
     byte[] byteArray = stream.toByteArray();
-
-
 
     request.setImage(new Image().encodeContent(byteArray));
     request.setFeatures(Arrays.asList(desiredFeature));
@@ -112,9 +109,16 @@ final class DecodeHandler extends Handler {
     }
 
     if (batchResponse != null) {
-      final TextAnnotation text = batchResponse.getResponses()
+      final TextAnnotation fullTextAnnotation = batchResponse.getResponses()
               .get(0).getFullTextAnnotation();
-      System.out.println(text);
+      System.out.println(fullTextAnnotation.getText());
+
+      Toast toast = Toast.makeText(activity, "Server OCR results:.\n"
+              + fullTextAnnotation.getText()
+              + "Battery capacity:", Toast.LENGTH_LONG);
+      toast.setGravity(Gravity.TOP, 0, 0);
+      toast.show();
+      activity.setShutterButtonClickable(true);
     }
 
   }
