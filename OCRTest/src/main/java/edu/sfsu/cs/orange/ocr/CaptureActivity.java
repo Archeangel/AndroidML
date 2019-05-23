@@ -75,7 +75,13 @@ import edu.sfsu.cs.orange.ocr.language.LanguageCodeHelper;
 import edu.sfsu.cs.orange.ocr.language.TranslateAsyncTask;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.functions.MultilayerPerceptron;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.FastVector;
+import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Utils;
 import weka.filters.Filter;
 
 /**
@@ -264,41 +270,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         return cameraManager;
     }
 
-    public void wekaTry(){
-        InputStream is = getResources().openRawResource(R.raw.ionosphere);
-        BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
-        try {
-            Instances m_Training = new Instances(datafile);
-            m_Training.setClassIndex(m_Training.numAttributes() - 1);
-            Filter m_Filter =
-                    ((Filter) Class.forName("weka.filters.unsupervised.instance.Randomize").newInstance());
-            m_Filter.setInputFormat(m_Training);
-            Instances localInstances = Filter.useFilter(m_Training, m_Filter);
-            Classifier m_Classifier;
-            m_Classifier = new weka.classifiers.trees.J48();
-            m_Classifier.buildClassifier(localInstances);
-            Evaluation m_Evaluation = new Evaluation(localInstances);
-
-            m_Evaluation.crossValidateModel(m_Classifier, localInstances, 10,
-                    m_Training.getRandomNumberGenerator(1L));
-            Log.e("Detail", m_Evaluation.toClassDetailsString());
-            Log.e("Summary", m_Evaluation.toSummaryString());
-
-            Log.e("Result", "================================================");
-            Log.e("Result", "Correct:"
-                    + m_Evaluation.correct()
-                    + "/Wrong:"
-                    + m_Evaluation.incorrect()
-                    + "/Correct(%):"
-                    + m_Evaluation.pctCorrect());
-            Log.e("Result", "================================================");
-        } catch (Exception e) {
-
-            e.printStackTrace();
-        }
-    }
-
-
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -307,8 +278,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
         if (isFirstLaunch) {
             setDefaultPreferences();
-            System.out.println("Let's put here some code of Weka!");
-            wekaTry();
         }
 
         Window window = getWindow();
@@ -376,70 +345,179 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                         try {
                             Rect rect = cameraManager.getFramingRect();
 
-                            final int BUFFER = 50;
-                            final int BIG_BUFFER = 60;
-                            if (lastX >= 0) {
-                                // Adjust the size of the viewfinder rectangle. Check if the touch event occurs in the corner areas first, because the regions overlap.
-                                if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
-                                        && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
-                                    // Top left corner: adjust both top and left sides
-                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (lastY - currentY));
-                                    viewfinderView.removeResultText();
-                                } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER))
-                                        && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
-                                    // Top right corner: adjust both top and right sides
-                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (lastY - currentY));
-                                    viewfinderView.removeResultText();
-                                } else if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
-                                        && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
-                                    // Bottom left corner: adjust both bottom and left sides
-                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (currentY - lastY));
-                                    viewfinderView.removeResultText();
-                                } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER))
-                                        && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
-                                    // Bottom right corner: adjust both bottom and right sides
-                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (currentY - lastY));
-                                    viewfinderView.removeResultText();
-                                } else if (((currentX >= rect.left - BUFFER && currentX <= rect.left + BUFFER) || (lastX >= rect.left - BUFFER && lastX <= rect.left + BUFFER))
-                                        && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
-                                    // Adjusting left side: event falls within BUFFER pixels of left side, and between top and bottom side limits
-                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 0);
-                                    viewfinderView.removeResultText();
-                                } else if (((currentX >= rect.right - BUFFER && currentX <= rect.right + BUFFER) || (lastX >= rect.right - BUFFER && lastX <= rect.right + BUFFER))
-                                        && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
-                                    // Adjusting right side: event falls within BUFFER pixels of right side, and between top and bottom side limits
-                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 0);
-                                    viewfinderView.removeResultText();
-                                } else if (((currentY <= rect.top + BUFFER && currentY >= rect.top - BUFFER) || (lastY <= rect.top + BUFFER && lastY >= rect.top - BUFFER))
-                                        && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
-                                    // Adjusting top side: event falls within BUFFER pixels of top side, and between left and right side limits
-                                    cameraManager.adjustFramingRect(0, 2 * (lastY - currentY));
-                                    viewfinderView.removeResultText();
-                                } else if (((currentY <= rect.bottom + BUFFER && currentY >= rect.bottom - BUFFER) || (lastY <= rect.bottom + BUFFER && lastY >= rect.bottom - BUFFER))
-                                        && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
-                                    // Adjusting bottom side: event falls within BUFFER pixels of bottom side, and between left and right side limits
-                                    cameraManager.adjustFramingRect(0, 2 * (currentY - lastY));
-                                    viewfinderView.removeResultText();
-                                }
-                            }
-                        } catch (NullPointerException e) {
-                            Log.e(TAG, "Framing rect not available", e);
-                        }
-                        v.invalidate();
-                        lastX = currentX;
-                        lastY = currentY;
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                        lastX = -1;
-                        lastY = -1;
-                        return true;
-                }
-                return false;
+            final int BUFFER = 50;
+            final int BIG_BUFFER = 60;
+            if (lastX >= 0) {
+              // Adjust the size of the viewfinder rectangle. Check if the touch event occurs in the corner areas first, because the regions overlap.
+              if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
+                  && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
+                // Top left corner: adjust both top and left sides
+                cameraManager.adjustFramingRect( 2 * (lastX - currentX), 2 * (lastY - currentY));
+                viewfinderView.removeResultText();
+              } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER)) 
+                  && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
+                // Top right corner: adjust both top and right sides
+                cameraManager.adjustFramingRect( 2 * (currentX - lastX), 2 * (lastY - currentY));
+                viewfinderView.removeResultText();
+              } else if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
+                  && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
+                // Bottom left corner: adjust both bottom and left sides
+                cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (currentY - lastY));
+                viewfinderView.removeResultText();
+              } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER)) 
+                  && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
+                // Bottom right corner: adjust both bottom and right sides
+                cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (currentY - lastY));
+                viewfinderView.removeResultText();
+              } else if (((currentX >= rect.left - BUFFER && currentX <= rect.left + BUFFER) || (lastX >= rect.left - BUFFER && lastX <= rect.left + BUFFER))
+                  && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
+                // Adjusting left side: event falls within BUFFER pixels of left side, and between top and bottom side limits
+                cameraManager.adjustFramingRect(2 * (lastX - currentX), 0);
+                viewfinderView.removeResultText();
+              } else if (((currentX >= rect.right - BUFFER && currentX <= rect.right + BUFFER) || (lastX >= rect.right - BUFFER && lastX <= rect.right + BUFFER))
+                  && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
+                // Adjusting right side: event falls within BUFFER pixels of right side, and between top and bottom side limits
+                cameraManager.adjustFramingRect(2 * (currentX - lastX), 0);
+                viewfinderView.removeResultText();
+              } else if (((currentY <= rect.top + BUFFER && currentY >= rect.top - BUFFER) || (lastY <= rect.top + BUFFER && lastY >= rect.top - BUFFER))
+                  && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
+                // Adjusting top side: event falls within BUFFER pixels of top side, and between left and right side limits
+                cameraManager.adjustFramingRect(0, 2 * (lastY - currentY));
+                viewfinderView.removeResultText();
+              } else if (((currentY <= rect.bottom + BUFFER && currentY >= rect.bottom - BUFFER) || (lastY <= rect.bottom + BUFFER && lastY >= rect.bottom - BUFFER))
+                  && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
+                // Adjusting bottom side: event falls within BUFFER pixels of bottom side, and between left and right side limits
+                cameraManager.adjustFramingRect(0, 2 * (currentY - lastY));
+                viewfinderView.removeResultText();
+              }     
             }
-        });
+          } catch (NullPointerException e) {
+            Log.e(TAG, "Framing rect not available", e);
+          }
+          v.invalidate();
+          lastX = currentX;
+          lastY = currentY;
+          return true;
+        case MotionEvent.ACTION_UP:
+          lastX = -1;
+          lastY = -1;
+          return true;
+        }
+        return false;
+      }
+    });
+    
+    isEngineReady = false;
+  }
 
-        isEngineReady = false;
+  private void wekaTry(){
+    //network variables
+    String backPropOptions =
+ "-L "+0.1 //learning rate
+            +" -M "+0 //momentum
+            +" -N "+10000 //epoch
+            +" -V "+0 //validation
+            +" -S "+0 //seed
+            +" -E "+0 //error
+            +" -H "+"3"; //hidden nodes.
+    //e.g. use "3,3" for 2 level hidden layer with 3 nodes
+
+    try{
+      //prepare historical data
+
+      InputStream is = getResources().openRawResource(R.raw.ocr);
+      BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
+
+      Instances trainingset = new Instances(datafile);
+      datafile.close();
+
+      trainingset.setClassIndex(trainingset.numAttributes() - 1);
+      //final attribute in a line stands for output
+
+      //network training
+      MultilayerPerceptron mlp = new MultilayerPerceptron();
+      mlp.setOptions(Utils.splitOptions(backPropOptions));
+      mlp.buildClassifier(trainingset);
+      System.out.println("final weights:");
+      System.out.println(mlp);
+
+      //display actual and forecast values
+      System.out.println("\nactual\tprediction");
+      for(int i=0;i<trainingset.numInstances();i++){
+
+        double actual = trainingset.instance(i).classValue();
+        double prediction =
+                mlp.distributionForInstance(trainingset.instance(i))[0];
+
+        System.out.println(actual+"\t"+prediction);
+
+      }
+
+      //success metrics
+      System.out.println("\nSuccess Metrics: ");
+      Evaluation eval = new Evaluation(trainingset);
+      //eval.evaluateModel(mlp, trainingset);
+      eval.crossValidateModel(mlp, trainingset, 4,
+              trainingset.getRandomNumberGenerator(1L));
+      Log.e("Detail", eval.toClassDetailsString());
+      Log.e("Summary", eval.toSummaryString());
+
+      Log.e("Result", "================================================");
+      Log.e("Result", "Correct:"
+              + eval.correct()
+              + "/Wrong:"
+              + eval.incorrect()
+              + "/Correct(%):"
+              + eval.pctCorrect());
+      Log.e("Result", "================================================");
+
+      //display metrics
+      //System.out.println("Instances: "+eval.numInstances());
+      //System.out.println("conf matrix: " );
+
+      //predict sth
+      Instances predictionset = initializeDataset();
+      System.out.println(predictionset.instance(0));
+      double[] distributions = mlp.distributionForInstance(predictionset.instance(0));
+      System.out.println("New prediction:");
+      for (double d: distributions) {
+        System.out.println("-----> " +d + "\t");
+      }
+
     }
+    catch(Exception ex){
+
+      System.out.println(ex);
+
+    }
+  }
+
+   Instances initializeDataset(){
+
+    FastVector fvWekaAttributes = new FastVector(3);
+
+    Attribute area = new Attribute("area");
+    Attribute battery = new Attribute("battery");
+    Attribute target = new Attribute("target", (FastVector)null);
+
+
+    fvWekaAttributes.addElement(area);
+    fvWekaAttributes.addElement(battery);
+    fvWekaAttributes.addElement(target);
+
+
+    double batteryPercentage = getBatteryPercentage();
+    Instances testset = new Instances("testset",fvWekaAttributes,0);
+    Instance item = new DenseInstance(3);
+    item.setValue(area, 10000000.0);
+    item.setValue(battery, batteryPercentage);
+    item.setValue(target, "local");
+
+    testset.add(item);
+
+    return testset;
+
+  }
 
     @Override
     protected void onResume() {
@@ -474,6 +552,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             // We already have the engine initialized, so just start the camera.
             resumeOCR();
         }
+        System.out.println("Let's put here some code of Weka!");
+        wekaTry();
     }
 
     /**
