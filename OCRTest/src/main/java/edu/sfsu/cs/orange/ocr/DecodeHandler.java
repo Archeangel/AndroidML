@@ -44,6 +44,7 @@ import android.util.Log;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -87,8 +88,15 @@ final class DecodeHandler extends Handler {
     AnnotateImageRequest request = new AnnotateImageRequest();
 
 
+    Bitmap bitmap = activity.getCameraManager().buildLuminanceSource((byte[])message.obj, message.arg1, message.arg2).renderCroppedGreyscaleBitmap();
 
-    request.setImage(new Image().encodeContent((byte[])message.obj));
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+    byte[] byteArray = stream.toByteArray();
+
+
+
+    request.setImage(new Image().encodeContent(byteArray));
     request.setFeatures(Arrays.asList(desiredFeature));
 
     BatchAnnotateImagesRequest batchRequest = new BatchAnnotateImagesRequest();
@@ -130,7 +138,11 @@ final class DecodeHandler extends Handler {
       }
       break;
     case R.id.ocr_decode:
-      ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+        if (activity.getPerformOnServer()) {
+            performOcrWithGoogleVision(message);
+        } else {
+            ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+        }
       break;
     case R.id.ocr_decode_google_vision:
       performOcrWithGoogleVision(message);
