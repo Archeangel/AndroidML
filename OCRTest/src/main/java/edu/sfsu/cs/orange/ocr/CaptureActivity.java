@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -477,46 +478,43 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
       //predict sth
       Instances predictionset = initializeDataset();
-      System.out.println(predictionset.instance(0));
+      String firstInstanceString = predictionset.instance(0).toString();
       double[] distributions = mlp.distributionForInstance(predictionset.instance(0));
-      System.out.println("New prediction:");
+      System.out.println("Prediction for " + firstInstanceString + ":");
       for (double d: distributions) {
         System.out.println("-----> " +d + "\t");
       }
-
     }
     catch(Exception ex){
-
       System.out.println(ex);
-
     }
   }
 
    Instances initializeDataset(){
 
-    FastVector fvWekaAttributes = new FastVector(3);
+    ArrayList fvWekaAttributes = new ArrayList();
 
     Attribute area = new Attribute("area");
     Attribute battery = new Attribute("battery");
-    Attribute target = new Attribute("target", (FastVector)null);
+    Attribute target = new Attribute("target", (ArrayList)null);
 
 
-    fvWekaAttributes.addElement(area);
-    fvWekaAttributes.addElement(battery);
-    fvWekaAttributes.addElement(target);
+    fvWekaAttributes.add(area);
+    fvWekaAttributes.add(battery);
+    fvWekaAttributes.add(target);
 
 
     double batteryPercentage = getBatteryPercentage();
     Instances testset = new Instances("testset",fvWekaAttributes,0);
     Instance item = new DenseInstance(3);
-    item.setValue(area, 10000000.0);
-    item.setValue(battery, batteryPercentage);
-    item.setValue(target, "local");
+    item.setValue(area, 50000000);
+    item.setValue(battery, 70);
+    item.setValue(target, "not_determined");
 
     testset.add(item);
+    testset.setClassIndex(testset.numAttributes() - 1);
 
     return testset;
-
   }
 
     @Override
