@@ -74,16 +74,13 @@ import edu.sfsu.cs.orange.ocr.camera.CameraManager;
 import edu.sfsu.cs.orange.ocr.camera.ShutterButton;
 import edu.sfsu.cs.orange.ocr.language.LanguageCodeHelper;
 import edu.sfsu.cs.orange.ocr.language.TranslateAsyncTask;
-import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
-import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.Utils;
-import weka.filters.Filter;
 
 /**
  * This activity opens the camera and does the actual scanning on a background thread. It draws a
@@ -258,6 +255,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private boolean isPaused;
     private static boolean isFirstLaunch; // True if this is the first time the app is being run
     private static boolean performOnServer;
+    private static boolean performOnServerML;
+    private static MultilayerPerceptron mlp;
 
     Handler getHandler() {
         return handler;
@@ -303,8 +302,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                 } else {
                     performOnServer = false;
                 }
+                //TODO: opcja wlaczajaca flage wlaczajaca gdzies indziej ML
             }
         });
+        trainPerceptron(); //TODO: do osobnego watku
 
         handler = null;
         lastResult = null;
@@ -411,86 +412,102 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     isEngineReady = false;
   }
 
-  private void wekaTry(){
-    //network variables
-    String backPropOptions =
- "-L "+0.1 //learning rate
-            +" -M "+0 //momentum
-            +" -N "+10000 //epoch
-            +" -V "+0 //validation
-            +" -S "+0 //seed
-            +" -E "+0 //error
-            +" -H "+"3"; //hidden nodes.
-    //e.g. use "3,3" for 2 level hidden layer with 3 nodes
+  private void trainPerceptron() {
+      //network variables
+      String backPropOptions =
+              "-L " + 0.1 //learning rate
+                      + " -M " + 0 //momentum
+                      + " -N " + 10000 //epoch
+                      + " -V " + 0 //validation
+                      + " -S " + 0 //seed
+                      + " -E " + 0 //error
+                      + " -H " + "3"; //hidden nodes.
+      //e.g. use "3,3" for 2 level hidden layer with 3 nodes
 
-    try{
-      //prepare historical data
+      try {
+          //prepare historical data
 
-      InputStream is = getResources().openRawResource(R.raw.ocr);
-      BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
+          InputStream is = getResources().openRawResource(R.raw.ocr);
+          BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
 
-      Instances trainingset = new Instances(datafile);
-      datafile.close();
+          Instances trainingset = new Instances(datafile);
+          datafile.close();
 
-      trainingset.setClassIndex(trainingset.numAttributes() - 1);
-      //final attribute in a line stands for output
+          trainingset.setClassIndex(trainingset.numAttributes() - 1);
+          //final attribute in a line stands for output
 
-      //network training
-      MultilayerPerceptron mlp = new MultilayerPerceptron();
-      mlp.setOptions(Utils.splitOptions(backPropOptions));
-      mlp.buildClassifier(trainingset);
-      System.out.println("final weights:");
-      System.out.println(mlp);
+          //network training
+          mlp = new MultilayerPerceptron();
+          mlp.setOptions(Utils.splitOptions(backPropOptions));
+          mlp.buildClassifier(trainingset);
+          System.out.println("final weights:");
+          System.out.println(mlp);
 
-      //display actual and forecast values
-      System.out.println("\nactual\tprediction");
-      for(int i=0;i<trainingset.numInstances();i++){
+          //display actual and forecast values
+          System.out.println("\nactual\tprediction");
+          for (int i = 0; i < trainingset.numInstances(); i++) {
 
-        double actual = trainingset.instance(i).classValue();
-        double prediction =
-                mlp.distributionForInstance(trainingset.instance(i))[0];
+              double actual = trainingset.instance(i).classValue();
+              double prediction =
+                      mlp.distributionForInstance(trainingset.instance(i))[0];
 
-        System.out.println(actual+"\t"+prediction);
+              System.out.println(actual + "\t" + prediction);
 
+          }
+
+          //success metrics
+          System.out.println("\nSuccess Metrics: ");
+          Evaluation eval = new Evaluation(trainingset);
+          //eval.evaluateModel(mlp, trainingset);
+          eval.crossValidateModel(mlp, trainingset, 4,
+                  trainingset.getRandomNumberGenerator(1L));
+          Log.e("Detail", eval.toClassDetailsString());
+          Log.e("Summary", eval.toSummaryString());
+
+          Log.e("Result", "================================================");
+          Log.e("Result", "Correct:"
+                  + eval.correct()
+                  + "/Wrong:"
+                  + eval.incorrect()
+                  + "/Correct(%):"
+                  + eval.pctCorrect());
+          Log.e("Result", "================================================");
       }
-
-      //success metrics
-      System.out.println("\nSuccess Metrics: ");
-      Evaluation eval = new Evaluation(trainingset);
-      //eval.evaluateModel(mlp, trainingset);
-      eval.crossValidateModel(mlp, trainingset, 4,
-              trainingset.getRandomNumberGenerator(1L));
-      Log.e("Detail", eval.toClassDetailsString());
-      Log.e("Summary", eval.toSummaryString());
-
-      Log.e("Result", "================================================");
-      Log.e("Result", "Correct:"
-              + eval.correct()
-              + "/Wrong:"
-              + eval.incorrect()
-              + "/Correct(%):"
-              + eval.pctCorrect());
-      Log.e("Result", "================================================");
-
-      //display metrics
-      //System.out.println("Instances: "+eval.numInstances());
-      //System.out.println("conf matrix: " );
-
-      //predict sth
-      Instances predictionset = initializeDataset();
-      String firstInstanceString = predictionset.instance(0).toString();
-      double[] distributions = mlp.distributionForInstance(predictionset.instance(0));
-      System.out.println("Prediction for " + firstInstanceString + ":");
-      for (double d: distributions) {
-        System.out.println("-----> " +d + "\t");
-      }
+        catch(Exception ex){
+            System.out.println(ex);
+        }
     }
-    catch(Exception ex){
-      System.out.println(ex);
-    }
-  }
+  void chooseLocationML(){
+        //predict sth
+        Instances predictionset = initializeDataset();
+        String firstInstanceString = predictionset.instance(0).toString();
+        double[] distributions = new double[0];
 
-   Instances initializeDataset(){
+        try {
+            distributions = mlp.distributionForInstance(predictionset.instance(0));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Prediction for " + firstInstanceString + ":");
+        for (double d : distributions) {
+            System.out.println("-----> " + d + "\t");
+        }
+
+        if (distributions[0] < 0.5) {
+            performOnServerML = true;
+        } else
+            performOnServerML = false;
+    }
+
+    String getChosenLocationML() {
+        if (performOnServerML)
+            return "Server";
+        else
+            return "Local";
+    }
+
+  private Instances initializeDataset(){
 
     ArrayList fvWekaAttributes = new ArrayList();
 
@@ -498,18 +515,15 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     Attribute battery = new Attribute("battery");
     Attribute target = new Attribute("target", (ArrayList)null);
 
-
     fvWekaAttributes.add(area);
     fvWekaAttributes.add(battery);
     fvWekaAttributes.add(target);
 
-
-    double batteryPercentage = getBatteryPercentage();
     Instances testset = new Instances("testset",fvWekaAttributes,0);
     Instance item = new DenseInstance(3);
-    item.setValue(area, 50000000);
-    item.setValue(battery, 70);
-    item.setValue(target, "not_determined");
+    item.setValue(area, 50000);
+    item.setValue(battery, getBatteryPercentage());
+    item.setValue(target, "local");
 
     testset.add(item);
     testset.setClassIndex(testset.numAttributes() - 1);
@@ -550,8 +564,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             // We already have the engine initialized, so just start the camera.
             resumeOCR();
         }
-        System.out.println("Let's put here some code of Weka!");
-        wekaTry();
     }
 
     /**

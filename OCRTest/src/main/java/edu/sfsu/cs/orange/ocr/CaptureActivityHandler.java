@@ -21,6 +21,7 @@ import edu.sfsu.cs.orange.ocr.R;
 import edu.sfsu.cs.orange.ocr.camera.CameraManager;
 import edu.sfsu.cs.orange.ocr.OcrResult;
 
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -132,11 +133,25 @@ final class CaptureActivityHandler extends Handler {
         activity.setShutterButtonClickable(true);
         Toast toast = Toast.makeText(activity.getBaseContext(), "OCR failed. Please try again."
                 + "Battery lvl:" +activity.getBatteryPercentage()
-                + "Battery capacity:" +activity.getBatteryCapacity(), Toast.LENGTH_LONG);
+                + "Battery capacity:" +activity.getBatteryCapacity()
+                + "ML choice: " + activity.getChosenLocationML(), Toast.LENGTH_LONG);
 
         toast.setGravity(Gravity.TOP, 0, 0);
         toast.show();
         break;
+    }
+
+    try {
+      Rect rect = cameraManager.getFramingRect();
+      Toast toast = Toast.makeText(activity.getBaseContext(), "Battery lvl:" + activity.getBatteryPercentage()
+              + "Battery capacity:" + activity.getBatteryCapacity()
+              + "ML choice: " + activity.getChosenLocationML()
+              + "Picture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
+
+      toast.setGravity(Gravity.TOP, 0, 0);
+      toast.show();
+    } catch (Exception e){
+      e.printStackTrace();
     }
   }
   

@@ -142,6 +142,7 @@ final class DecodeHandler extends Handler {
       }
       break;
     case R.id.ocr_decode:
+      activity.chooseLocationML();
         if (activity.getPerformOnServer()) {
             performOcrWithGoogleVision(message);
         } else {
