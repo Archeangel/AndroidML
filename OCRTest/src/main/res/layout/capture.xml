@@ -201,17 +201,6 @@
         android:textColor="@color/status_text"
         android:textSize="14sp" />
 
-    <Switch
-        android:id="@+id/switch1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:track="@drawable/background"
-        android:thumb="@drawable/background_pressed"
-        android:text="OnServer"
-        android:visibility="visible" />
-
-
 
     <ToggleButton android:id="@+id/torch_button"
              android:layout_width="wrap_content"
@@ -225,6 +214,32 @@
              android:layout_marginRight="8dip"
              android:layout_marginBottom="8dip"
              android:scaleType="center" />
+
+    <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/radioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+      <RadioButton
+          android:id="@+id/radio_locally"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Locally" />
+
+      <RadioButton
+          android:id="@+id/radio_server"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Server" />
+
+      <RadioButton
+          android:id="@+id/radio_ml"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="ML" />
+    </RadioGroup>
+
 
 
   </RelativeLayout>

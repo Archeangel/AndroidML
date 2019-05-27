@@ -111,13 +111,19 @@ final class DecodeHandler extends Handler {
     if (batchResponse != null) {
       final TextAnnotation fullTextAnnotation = batchResponse.getResponses()
               .get(0).getFullTextAnnotation();
-      System.out.println(fullTextAnnotation.getText());
+      String textAnnotation = "";
+        if (fullTextAnnotation != null) {
+            textAnnotation = fullTextAnnotation.getText();
+        }
+
+      System.out.println(textAnnotation);
 
       Toast toast = Toast.makeText(activity, "Server OCR results:.\n"
-              + fullTextAnnotation.getText()
-              + "Battery capacity:", Toast.LENGTH_LONG);
+              + textAnnotation
+              + " Battery capacity:", Toast.LENGTH_LONG);
       toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();
+
       activity.setShutterButtonClickable(true);
     }
 
@@ -142,12 +148,20 @@ final class DecodeHandler extends Handler {
       }
       break;
     case R.id.ocr_decode:
-      activity.chooseLocationML();
-        if (activity.getPerformOnServer()) {
-            performOcrWithGoogleVision(message);
+      if (activity.getWhereToPerform() == 2) {
+        activity.chooseLocationML();
+        if (activity.getPerformOnServerML()) {
+          performOcrWithGoogleVision(message);
         } else {
-            ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+          ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
         }
+      }
+      else if (activity.getWhereToPerform() == 1){
+        performOcrWithGoogleVision(message);
+      }
+      else {
+        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+      }
       break;
     case R.id.ocr_decode_google_vision:
       performOcrWithGoogleVision(message);

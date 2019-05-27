@@ -5,8 +5,9 @@
 @attribute target {local, mcc}
 
 @data
-100000, 80, local
+700000,100, mcc
+10000, 80, local
 3000000, 50, mcc
-100000, 60, mcc
-50000000, 40, mcc
+1000000, 60, mcc
+5000000, 40, mcc
 50000, 20, local

@@ -144,9 +144,9 @@ final class CaptureActivityHandler extends Handler {
     try {
       Rect rect = cameraManager.getFramingRect();
       Toast toast = Toast.makeText(activity.getBaseContext(), "Battery lvl:" + activity.getBatteryPercentage()
-              + "Battery capacity:" + activity.getBatteryCapacity()
-              + "ML choice: " + activity.getChosenLocationML()
-              + "Picture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
+              + "\nBattery capacity:" + activity.getBatteryCapacity()
+              + "\nML choice: " + activity.getChosenLocationML()
+              + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
 
       toast.setGravity(Gravity.TOP, 0, 0);
       toast.show();

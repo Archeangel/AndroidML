@@ -62,9 +62,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.Switch;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -254,8 +253,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private boolean isEngineReady;
     private boolean isPaused;
     private static boolean isFirstLaunch; // True if this is the first time the app is being run
-    private static boolean performOnServer;
     private static boolean performOnServerML;
+    private static short whereToPerform;
     private static MultilayerPerceptron mlp;
 
     Handler getHandler() {
@@ -292,19 +291,44 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         registerForContextMenu(statusViewBottom);
         statusViewTop = (TextView) findViewById(R.id.status_view_top);
         registerForContextMenu(statusViewTop);
-        Switch sw = (Switch) findViewById(R.id.switch1);
-        performOnServer = sw.isChecked();
+//        Switch sw = (Switch) findViewById(R.id.switch1);
+//        performOnServer = sw.isChecked();
+//
+//        sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                if (isChecked) {
+//                    performOnServer = true;
+//                } else {
+//                    performOnServer = false;
+//                }
+//            }
+//        });
 
-        sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    performOnServer = true;
-                } else {
-                    performOnServer = false;
-                }
-                //TODO: opcja wlaczajaca flage wlaczajaca gdzies indziej ML
+        RadioButton locallyBtn = (RadioButton) findViewById(R.id.radio_locally);
+        RadioButton serverBtn = (RadioButton) findViewById(R.id.radio_server);
+        RadioButton MLBtn = (RadioButton) findViewById(R.id.radio_ml);
+        onRadioBtnClicked(locallyBtn);
+        onRadioBtnClicked(serverBtn);
+        onRadioBtnClicked(MLBtn);
+        locallyBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onRadioBtnClicked(view);
             }
         });
+        serverBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onRadioBtnClicked(view);
+            }
+        });
+        MLBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onRadioBtnClicked(view);
+            }
+        });
+
         trainPerceptron(); //TODO: do osobnego watku
 
         handler = null;
@@ -412,6 +436,28 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     isEngineReady = false;
   }
 
+  private void onRadioBtnClicked(View view){
+      boolean checked = ((RadioButton) view).isChecked();
+
+      // Check which radio button was clicked
+      switch(view.getId()) {
+          case R.id.radio_locally:
+              if (checked)
+                  whereToPerform = 0;
+                  break;
+          case R.id.radio_server:
+              if (checked)
+                  whereToPerform = 1;
+                  break;
+          case R.id.radio_ml:
+              if (checked)
+                  whereToPerform = 2;
+                  break;
+      }
+  }
+
+  short getWhereToPerform(){ return whereToPerform; }
+
   private void trainPerceptron() {
       //network variables
       String backPropOptions =
@@ -507,6 +553,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             return "Local";
     }
 
+    boolean getPerformOnServerML(){ return performOnServerML; }
+
   private Instances initializeDataset(){
 
     ArrayList fvWekaAttributes = new ArrayList();
@@ -521,7 +569,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     Instances testset = new Instances("testset",fvWekaAttributes,0);
     Instance item = new DenseInstance(3);
-    item.setValue(area, 50000);
+
+    Rect rect = cameraManager.getFramingRect();
+    item.setValue(area, (rect.height()) * (rect.width()));
     item.setValue(battery, getBatteryPercentage());
     item.setValue(target, "local");
 
@@ -1273,10 +1323,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     static boolean getFirstLaunch() {
         return isFirstLaunch;
-    }
-
-    public boolean getPerformOnServer() {
-        return performOnServer;
     }
 
     /**
