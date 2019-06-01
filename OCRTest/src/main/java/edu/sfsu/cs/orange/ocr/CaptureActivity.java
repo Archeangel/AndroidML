@@ -255,7 +255,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private static boolean isFirstLaunch; // True if this is the first time the app is being run
     private static boolean performOnServerML;
     private static short whereToPerform;
-    private static MultilayerPerceptron mlp;
+    private static MultilayerPerceptron mlpBattery;
+    private static MultilayerPerceptron mlpTime;
 
     Handler getHandler() {
         return handler;
@@ -329,7 +330,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             }
         });
 
-        trainPerceptron(); //TODO: do osobnego watku
+        trainNetworks(); //TODO: do osobnego watku
 
         handler = null;
         lastResult = null;
@@ -458,9 +459,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   short getWhereToPerform(){ return whereToPerform; }
 
-  private void trainPerceptron() {
+  private void trainNetworks() {
       //network variables
-      String backPropOptions =
+      String options =
               "-L " + 0.1 //learning rate
                       + " -M " + 0 //momentum
                       + " -N " + 10000 //epoch
@@ -471,79 +472,99 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       //e.g. use "3,3" for 2 level hidden layer with 3 nodes
 
       try {
-          //prepare historical data
+          //prepare historical data - BATTERY
+          InputStream isBattery = getResources().openRawResource(R.raw.ocr_battery);
+          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(isBattery));
+          Instances trainingsetBattery = new Instances(datafileBattery);
+          datafileBattery.close();
+          mlpBattery = new MultilayerPerceptron();
+          mlpBattery.setOptions(Utils.splitOptions(options));
+          trainNetwork(mlpBattery, trainingsetBattery);
 
-          InputStream is = getResources().openRawResource(R.raw.ocr);
-          BufferedReader datafile = new BufferedReader(new InputStreamReader(is));
+          checkEvaluation(mlpBattery, trainingsetBattery);
 
-          Instances trainingset = new Instances(datafile);
-          datafile.close();
 
-          trainingset.setClassIndex(trainingset.numAttributes() - 1);
-          //final attribute in a line stands for output
-
-          //network training
-          mlp = new MultilayerPerceptron();
-          mlp.setOptions(Utils.splitOptions(backPropOptions));
-          mlp.buildClassifier(trainingset);
-          System.out.println("final weights:");
-          System.out.println(mlp);
-
-          //display actual and forecast values
-          System.out.println("\nactual\tprediction");
-          for (int i = 0; i < trainingset.numInstances(); i++) {
-
-              double actual = trainingset.instance(i).classValue();
-              double prediction =
-                      mlp.distributionForInstance(trainingset.instance(i))[0];
-
-              System.out.println(actual + "\t" + prediction);
-
-          }
-
-          //success metrics
-          System.out.println("\nSuccess Metrics: ");
-          Evaluation eval = new Evaluation(trainingset);
-          //eval.evaluateModel(mlp, trainingset);
-          eval.crossValidateModel(mlp, trainingset, 4,
-                  trainingset.getRandomNumberGenerator(1L));
-          Log.e("Detail", eval.toClassDetailsString());
-          Log.e("Summary", eval.toSummaryString());
-
-          Log.e("Result", "================================================");
-          Log.e("Result", "Correct:"
-                  + eval.correct()
-                  + "/Wrong:"
-                  + eval.incorrect()
-                  + "/Correct(%):"
-                  + eval.pctCorrect());
-          Log.e("Result", "================================================");
       }
         catch(Exception ex){
             System.out.println(ex);
         }
     }
+
+  void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+
+      trainingset.setClassIndex(trainingset.numAttributes() - 1);
+      //final attribute in a line stands for output
+
+      //network training - battery
+      mlp.buildClassifier(trainingset);
+      System.out.println("Final weights:");
+      System.out.println(mlp);
+  }
+
+  void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+      //display actual and forecast values
+      System.out.println("\nactual\tprediction");
+      for (int i = 0; i < trainingset.numInstances(); i++) {
+          double actual = trainingset.instance(i).classValue();
+          double prediction =
+                  mlp.distributionForInstance(trainingset.instance(i))[0];
+          System.out.println(actual + "\t" + prediction);
+      }
+
+      //success metrics
+      System.out.println("\nSuccess Metrics: ");
+      Evaluation eval = new Evaluation(trainingset);
+
+      eval.evaluateModel(mlp, trainingset);
+
+      //display metrics
+      System.out.println("Correlation: "+eval.correlationCoefficient());
+      System.out.println("MAE: "+eval.meanAbsoluteError());
+      System.out.println("RMSE: "+eval.rootMeanSquaredError());
+      System.out.println("RAE: "+eval.relativeAbsoluteError()+"%");
+      System.out.println("RRSE: "+eval.rootRelativeSquaredError()+"%");
+      System.out.println("Instances: "+eval.numInstances());
+
+
+//      eval.crossValidateModel(mlp, trainingset, 4,
+//              trainingset.getRandomNumberGenerator(1L));
+//      Log.e("Detail", eval.toClassDetailsString());
+//      Log.e("Summary", eval.toSummaryString());
+//
+//      Log.e("Result", "================================================");
+//      Log.e("Result", "Correct:"
+//              + eval.correct()
+//              + "/Wrong:"
+//              + eval.incorrect()
+//              + "/Correct(%):"
+//              + eval.pctCorrect());
+//      Log.e("Result", "================================================");
+  }
   void chooseLocationML(){
         //predict sth
         Instances predictionset = initializeDataset();
         String firstInstanceString = predictionset.instance(0).toString();
-        double[] distributions = new double[0];
+        String secondInstanceString = predictionset.instance(1).toString();
+        double[] distributions1 = new double[0];
+        double[] distributions2 = new double[0];
 
         try {
-            distributions = mlp.distributionForInstance(predictionset.instance(0));
+            distributions1 = mlpBattery.distributionForInstance(predictionset.instance(0));
+            distributions2 = mlpBattery.distributionForInstance(predictionset.instance(1));
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         System.out.println("Prediction for " + firstInstanceString + ":");
-        for (double d : distributions) {
+        for (double d : distributions1) {
             System.out.println("-----> " + d + "\t");
         }
+        System.out.println("Prediction for " + secondInstanceString + ":");
+      for (double d : distributions2) {
+          System.out.println("-----> " + d + "\t");
+      }
 
-        if (distributions[0] < 0.5) {
-            performOnServerML = true;
-        } else
-            performOnServerML = false;
+      performOnServerML = (distributions1[0] > distributions2[0]);
     }
 
     String getChosenLocationML() {
@@ -560,22 +581,28 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     ArrayList fvWekaAttributes = new ArrayList();
 
     Attribute area = new Attribute("area");
-    Attribute battery = new Attribute("battery");
+    Attribute current_battery = new Attribute("current_battery");
     Attribute target = new Attribute("target", (ArrayList)null);
+    Attribute new_battery = new Attribute("new_battery");
 
     fvWekaAttributes.add(area);
-    fvWekaAttributes.add(battery);
+    fvWekaAttributes.add(current_battery);
     fvWekaAttributes.add(target);
+    fvWekaAttributes.add(new_battery);
 
     Instances testset = new Instances("testset",fvWekaAttributes,0);
-    Instance item = new DenseInstance(3);
 
     Rect rect = cameraManager.getFramingRect();
-    item.setValue(area, (rect.height()) * (rect.width()));
-    item.setValue(battery, getBatteryPercentage());
-    item.setValue(target, "local");
+    String targets[] = {"local", "mcc"};
+    for (String s : targets){
+        Instance item = new DenseInstance(4);
+        item.setValue(area, (rect.height()) * (rect.width()));
+        item.setValue(current_battery, (getBatteryPercentage()*getBatteryCapacity()));
+        item.setValue(target, s);
+        item.setValue(new_battery, -100);
+        testset.add(item);
+    }
 
-    testset.add(item);
     testset.setClassIndex(testset.numAttributes() - 1);
 
     return testset;

@@ -1,0 +1,14 @@
+@relation ocr
+
+@attribute area numeric
+@attribute current_battery numeric
+@attribute target {local, mcc}
+@attribute new_battery numeric
+
+@data
+700000,10000, mcc, 9500
+10000, 8000, local, 7800
+3000000, 5000, mcc, 4300
+1000000, 6000, mcc, 5500
+5000000, 4000, mcc, 3200
+50000, 2000, local, 1300
