@@ -140,20 +140,9 @@ final class CaptureActivityHandler extends Handler {
         toast.show();
         break;
     }
-
-    try {
-      Rect rect = cameraManager.getFramingRect();
-      Toast toast = Toast.makeText(activity.getBaseContext(), "Battery lvl:" + activity.getBatteryPercentage()
-              + "\nBattery capacity:" + activity.getBatteryCapacity()
-              + "\nML choice: " + activity.getChosenLocationML()
-              + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
-
-      toast.setGravity(Gravity.TOP, 0, 0);
-      toast.show();
-    } catch (Exception e){
-      e.printStackTrace();
-    }
+    activity.displayMsgAboutTask();
   }
+
   
   void stop() {
     // TODO See if this should be done by sending a quit message to decodeHandler as is done

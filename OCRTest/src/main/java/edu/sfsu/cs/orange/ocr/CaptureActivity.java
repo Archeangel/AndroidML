@@ -258,6 +258,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private static MultilayerPerceptron mlpBattery;
     private static MultilayerPerceptron mlpTime;
 
+    private double prevBattery;
+    private long prevTime;
+
     Handler getHandler() {
         return handler;
     }
@@ -292,18 +295,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         registerForContextMenu(statusViewBottom);
         statusViewTop = (TextView) findViewById(R.id.status_view_top);
         registerForContextMenu(statusViewTop);
-//        Switch sw = (Switch) findViewById(R.id.switch1);
-//        performOnServer = sw.isChecked();
-//
-//        sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-//                if (isChecked) {
-//                    performOnServer = true;
-//                } else {
-//                    performOnServer = false;
-//                }
-//            }
-//        });
 
         RadioButton locallyBtn = (RadioButton) findViewById(R.id.radio_locally);
         RadioButton serverBtn = (RadioButton) findViewById(R.id.radio_server);
@@ -473,17 +464,23 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
       try {
           //prepare historical data - BATTERY
-          InputStream isBattery = getResources().openRawResource(R.raw.ocr_battery);
-          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(isBattery));
+          InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
+          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
           Instances trainingsetBattery = new Instances(datafileBattery);
           datafileBattery.close();
           mlpBattery = new MultilayerPerceptron();
           mlpBattery.setOptions(Utils.splitOptions(options));
           trainNetwork(mlpBattery, trainingsetBattery);
 
-          checkEvaluation(mlpBattery, trainingsetBattery);
+          InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
+          BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
+          Instances trainingsetTime = new Instances(datafileTime);
+          datafileTime.close();
+          mlpTime = new MultilayerPerceptron();
+          mlpTime.setOptions(Utils.splitOptions(options));
+          trainNetwork(mlpTime, trainingsetTime);
 
-
+          //checkEvaluation(mlpBattery, trainingsetBattery);
       }
         catch(Exception ex){
             System.out.println(ex);
@@ -541,16 +538,36 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 //      Log.e("Result", "================================================");
   }
   void chooseLocationML(){
+     boolean batteryBetterWithServer = chooseLocationML(0);
+     boolean timeBetterWithServer = chooseLocationML(1);
+
+     performOnServerML = batteryBetterWithServer || timeBetterWithServer;
+    }
+
+  boolean chooseLocationML(int option){
         //predict sth
-        Instances predictionset = initializeDataset();
+        String classString = "";
+        if (option == 0)
+            classString = "new_battery";
+        else
+            classString = "time";
+
+        Instances predictionset = initializeDataset(classString);
         String firstInstanceString = predictionset.instance(0).toString();
         String secondInstanceString = predictionset.instance(1).toString();
+
         double[] distributions1 = new double[0];
         double[] distributions2 = new double[0];
 
         try {
-            distributions1 = mlpBattery.distributionForInstance(predictionset.instance(0));
-            distributions2 = mlpBattery.distributionForInstance(predictionset.instance(1));
+            if (option == 0) {
+                distributions1 = mlpBattery.distributionForInstance(predictionset.instance(0));
+                distributions2 = mlpBattery.distributionForInstance(predictionset.instance(1));
+            }
+            else {
+                distributions1 = mlpTime.distributionForInstance(predictionset.instance(0));
+                distributions2 = mlpTime.distributionForInstance(predictionset.instance(1));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -560,11 +577,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             System.out.println("-----> " + d + "\t");
         }
         System.out.println("Prediction for " + secondInstanceString + ":");
-      for (double d : distributions2) {
-          System.out.println("-----> " + d + "\t");
-      }
+        for (double d : distributions2) {
+            System.out.println("-----> " + d + "\t");
+        }
 
-      performOnServerML = (distributions1[0] > distributions2[0]);
+        return distributions1[0] > distributions2[0];
     }
 
     String getChosenLocationML() {
@@ -576,19 +593,41 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     boolean getPerformOnServerML(){ return performOnServerML; }
 
-  private Instances initializeDataset(){
+    void saveCurrentTimeAndBattery(){
+        prevBattery = getBatteryPercentage()*getBatteryCapacity();
+        prevTime = System.nanoTime();
+    }
+    void displayMsgAboutTask(){
+        //TODO: if everything works well, this info should be added to both arff files
+        try {
+            Rect rect = cameraManager.getFramingRect();
+            long currentTime = System.nanoTime();
+            Toast toast = Toast.makeText(this, "Prev battery: " + prevBattery
+                    + "\nCurrent battery: " + getBatteryCapacity()*getBatteryPercentage()
+                    + "\nExecution time: "  + (currentTime - prevTime)
+                    + "\nML choice: " + getChosenLocationML()
+                    + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
+
+            toast.setGravity(Gravity.TOP, 0, 0);
+            toast.show();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+  private Instances initializeDataset(String classString){
 
     ArrayList fvWekaAttributes = new ArrayList();
 
     Attribute area = new Attribute("area");
     Attribute current_battery = new Attribute("current_battery");
     Attribute target = new Attribute("target", (ArrayList)null);
-    Attribute new_battery = new Attribute("new_battery");
+    Attribute classToPredict = new Attribute(classString);
 
     fvWekaAttributes.add(area);
     fvWekaAttributes.add(current_battery);
     fvWekaAttributes.add(target);
-    fvWekaAttributes.add(new_battery);
+    fvWekaAttributes.add(classToPredict);
 
     Instances testset = new Instances("testset",fvWekaAttributes,0);
 
@@ -599,7 +638,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         item.setValue(area, (rect.height()) * (rect.width()));
         item.setValue(current_battery, (getBatteryPercentage()*getBatteryCapacity()));
         item.setValue(target, s);
-        item.setValue(new_battery, -100);
+        item.setValue(classToPredict, -100);
         testset.add(item);
     }
 

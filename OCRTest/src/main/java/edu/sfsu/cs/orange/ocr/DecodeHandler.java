@@ -126,6 +126,7 @@ final class DecodeHandler extends Handler {
 
       activity.setShutterButtonClickable(true);
     }
+    activity.displayMsgAboutTask();
 
   }
 
@@ -138,6 +139,8 @@ final class DecodeHandler extends Handler {
     if (!running) {
       return;
     }
+
+    activity.saveCurrentTimeAndBattery();
 
     switch (message.what) {        
     case R.id.ocr_continuous_decode:
