@@ -19,6 +19,8 @@ package edu.sfsu.cs.orange.ocr;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -40,10 +42,12 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.annotation.RequiresApi;
 import android.text.ClipboardManager;
 import android.text.SpannableStringBuilder;
 import android.text.style.CharacterStyle;
@@ -258,8 +262,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private static MultilayerPerceptron mlpBattery;
     private static MultilayerPerceptron mlpTime;
 
-    private double prevBattery;
+    private long prevBattery;
     private long prevTime;
+    private static String mlpBatteryFile = "battery.arff";
+    private static String mlpTimeFile = "time.arff";
 
     Handler getHandler() {
         return handler;
@@ -281,6 +287,39 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
         if (isFirstLaunch) {
             setDefaultPreferences();
+            //utworzenie pliku z danymi
+            File batteryFile = new File(this.getFilesDir(), mlpBatteryFile);
+            File timeFile = new File(this.getFilesDir(), mlpTimeFile);
+            String batteryContents = "@relation ocrBattery\n" +
+                    "\n" +
+                    "@attribute area numeric\n" +
+                    "@attribute current_battery numeric\n" +
+                    "@attribute target {local, mcc}\n" +
+                    "@attribute new_battery numeric\n" +
+                    "\n" +
+                    "@data\n" +
+                    "700000,10000, mcc, 9500";
+            String timeContents = "@relation ocrTime\n" +
+                    "\n" +
+                    "@attribute area numeric\n" +
+                    "@attribute current_battery numeric\n" +
+                    "@attribute target {local, mcc}\n" +
+                    "@attribute time numeric\n" +
+                    "\n" +
+                    "@data\n" +
+                    "700000,100, mcc, 1000";
+            FileOutputStream outputStream;
+            try {
+                outputStream = openFileOutput(batteryFile.getName(), Context.MODE_PRIVATE);
+                outputStream.write(batteryContents.getBytes());
+                outputStream.close();
+                outputStream = openFileOutput(timeFile.getName(), Context.MODE_PRIVATE);
+                outputStream.write(timeContents.getBytes());
+                outputStream.close();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+
         }
 
         Window window = getWindow();
@@ -476,23 +515,29 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                         + " -H " + "3"; //hidden nodes.
         //e.g. use "3,3" for 2 level hidden layer with 3 nodes
 
-        try {
-            //prepare historical data - BATTERY
-            InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
-            BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
-            Instances trainingsetBattery = new Instances(datafileBattery);
-            datafileBattery.close();
-            mlpBattery = new MultilayerPerceptron();
-            mlpBattery.setOptions(Utils.splitOptions(options));
-            trainNetwork(mlpBattery, trainingsetBattery);
+      try {
+          //prepare historical data - BATTERY
+          FileInputStream inputBattery = openFileInput(mlpBatteryFile);
+//          inp.write(batteryContents.getBytes());
+//          outputStream.close();
+//
+//          InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
+          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
+          Instances trainingsetBattery = new Instances(datafileBattery);
+          datafileBattery.close();
+          mlpBattery = new MultilayerPerceptron();
+          mlpBattery.setOptions(Utils.splitOptions(options));
+          trainNetwork(mlpBattery, trainingsetBattery);
 
-            InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
-            BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
-            Instances trainingsetTime = new Instances(datafileTime);
-            datafileTime.close();
-            mlpTime = new MultilayerPerceptron();
-            mlpTime.setOptions(Utils.splitOptions(options));
-            trainNetwork(mlpTime, trainingsetTime);
+          //TIME
+          //InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
+          FileInputStream inputTime = openFileInput(mlpTimeFile);
+          BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
+          Instances trainingsetTime = new Instances(datafileTime);
+          datafileTime.close();
+          mlpTime = new MultilayerPerceptron();
+          mlpTime.setOptions(Utils.splitOptions(options));
+          trainNetwork(mlpTime, trainingsetTime);
 
             //checkEvaluation(mlpBattery, trainingsetBattery);
         } catch (Exception ex) {
@@ -599,17 +644,17 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     String getChosenLocationML() {
         if (performOnServerML)
-            return "Server";
+            return "mcc";
         else
-            return "Local";
+            return "local";
     }
 
     boolean getPerformOnServerML() {
         return performOnServerML;
     }
 
-    void saveCurrentTimeAndBattery() {
-        prevBattery = getBatteryPercentage() * getBatteryCapacity();
+    void saveCurrentTimeAndBattery(){
+        prevBattery = getBatteryCurrentEnergy(); //getBatteryPercentage()*getBatteryCapacity();
         prevTime = System.nanoTime();
     }
 
@@ -618,15 +663,35 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         try {
             Rect rect = cameraManager.getFramingRect();
             long currentTime = System.nanoTime();
+            long area = rect.height() * rect.width();
+            long currentBattery = getBatteryCurrentEnergy();
+
+            long executionTime = currentTime - prevTime;
             Toast toast = Toast.makeText(this, "Prev battery: " + prevBattery
-                    + "\nCurrent battery: " + getBatteryCapacity() * getBatteryPercentage()
-                    + "\nExecution time: " + (currentTime - prevTime)
+                    + "\nBattery delta: " + (getBatteryCurrentEnergy() - prevBattery) //getBatteryCapacity()*getBatteryPercentage()
+                    + "\nExecution time: "  + (currentTime - prevTime)
                     + "\nML choice: " + getChosenLocationML()
                     + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
 
             toast.setGravity(Gravity.TOP, 0, 0);
             toast.show();
-        } catch (Exception e) {
+
+            //write to files
+            String batteryContents = (area + " " + prevBattery + " " + getChosenLocationML() + " " + currentBattery);
+            String timeContents = (area + " " + prevBattery + " " + getChosenLocationML() + " " + executionTime);
+            FileOutputStream outputStream;
+            try {
+                outputStream = openFileOutput(mlpBatteryFile, Context.MODE_APPEND);
+                outputStream.write(batteryContents.getBytes());
+                outputStream.close();
+                outputStream = openFileOutput(mlpTimeFile, Context.MODE_APPEND);
+                outputStream.write(timeContents.getBytes());
+                outputStream.close();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+
+        } catch (Exception e){
             e.printStackTrace();
         }
     }
@@ -647,16 +712,16 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
         Instances testset = new Instances("testset", fvWekaAttributes, 0);
 
-        Rect rect = cameraManager.getFramingRect();
-        String targets[] = {"local", "mcc"};
-        for (String s : targets) {
-            Instance item = new DenseInstance(4);
-            item.setValue(area, (rect.height()) * (rect.width()));
-            item.setValue(current_battery, (getBatteryPercentage() * getBatteryCapacity()));
-            item.setValue(target, s);
-            item.setValue(classToPredict, -100);
-            testset.add(item);
-        }
+    Rect rect = cameraManager.getFramingRect();
+    String targets[] = {"local", "mcc"};
+    for (String s : targets){
+        Instance item = new DenseInstance(4);
+        item.setValue(area, (rect.height()) * (rect.width()));
+        item.setValue(current_battery, (getBatteryCurrentEnergy()));//getBatteryPercentage()*getBatteryCapacity()));
+        item.setValue(target, s);
+        item.setValue(classToPredict, -100);
+        testset.add(item);
+    }
 
         testset.setClassIndex(testset.numAttributes() - 1);
 
@@ -1050,6 +1115,14 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         baseApi = new TessBaseAPI();
         new OcrInitAsyncTask(this, baseApi, dialog, indeterminateDialog, languageCode, languageName, ocrEngineMode)
                 .execute(storageRoot.toString());
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public long getBatteryCurrentEnergy() {
+        BatteryManager batteryManager = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
+        assert batteryManager != null;
+        return batteryManager.getLongProperty(BatteryManager
+                .BATTERY_PROPERTY_ENERGY_COUNTER);
     }
 
     public int getBatteryPercentage() {
