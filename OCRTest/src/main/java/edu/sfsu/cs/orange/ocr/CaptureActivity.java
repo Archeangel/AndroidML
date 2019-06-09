@@ -299,9 +299,12 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         RadioButton locallyBtn = (RadioButton) findViewById(R.id.radio_locally);
         RadioButton serverBtn = (RadioButton) findViewById(R.id.radio_server);
         RadioButton MLBtn = (RadioButton) findViewById(R.id.radio_ml);
+        RadioButton classBtn = (RadioButton) findViewById(R.id.radio_class);
         onRadioBtnClicked(locallyBtn);
         onRadioBtnClicked(serverBtn);
         onRadioBtnClicked(MLBtn);
+        onRadioBtnClicked(classBtn);
+
         locallyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -320,7 +323,12 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                 onRadioBtnClicked(view);
             }
         });
-
+        classBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onRadioBtnClicked(view);
+            }
+        });
         trainNetworks(); //TODO: do osobnego watku
 
         handler = null;
@@ -363,164 +371,169 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                         try {
                             Rect rect = cameraManager.getFramingRect();
 
-            final int BUFFER = 50;
-            final int BIG_BUFFER = 60;
-            if (lastX >= 0) {
-              // Adjust the size of the viewfinder rectangle. Check if the touch event occurs in the corner areas first, because the regions overlap.
-              if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
-                  && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
-                // Top left corner: adjust both top and left sides
-                cameraManager.adjustFramingRect( 2 * (lastX - currentX), 2 * (lastY - currentY));
-                viewfinderView.removeResultText();
-              } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER)) 
-                  && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
-                // Top right corner: adjust both top and right sides
-                cameraManager.adjustFramingRect( 2 * (currentX - lastX), 2 * (lastY - currentY));
-                viewfinderView.removeResultText();
-              } else if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
-                  && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
-                // Bottom left corner: adjust both bottom and left sides
-                cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (currentY - lastY));
-                viewfinderView.removeResultText();
-              } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER)) 
-                  && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
-                // Bottom right corner: adjust both bottom and right sides
-                cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (currentY - lastY));
-                viewfinderView.removeResultText();
-              } else if (((currentX >= rect.left - BUFFER && currentX <= rect.left + BUFFER) || (lastX >= rect.left - BUFFER && lastX <= rect.left + BUFFER))
-                  && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
-                // Adjusting left side: event falls within BUFFER pixels of left side, and between top and bottom side limits
-                cameraManager.adjustFramingRect(2 * (lastX - currentX), 0);
-                viewfinderView.removeResultText();
-              } else if (((currentX >= rect.right - BUFFER && currentX <= rect.right + BUFFER) || (lastX >= rect.right - BUFFER && lastX <= rect.right + BUFFER))
-                  && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
-                // Adjusting right side: event falls within BUFFER pixels of right side, and between top and bottom side limits
-                cameraManager.adjustFramingRect(2 * (currentX - lastX), 0);
-                viewfinderView.removeResultText();
-              } else if (((currentY <= rect.top + BUFFER && currentY >= rect.top - BUFFER) || (lastY <= rect.top + BUFFER && lastY >= rect.top - BUFFER))
-                  && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
-                // Adjusting top side: event falls within BUFFER pixels of top side, and between left and right side limits
-                cameraManager.adjustFramingRect(0, 2 * (lastY - currentY));
-                viewfinderView.removeResultText();
-              } else if (((currentY <= rect.bottom + BUFFER && currentY >= rect.bottom - BUFFER) || (lastY <= rect.bottom + BUFFER && lastY >= rect.bottom - BUFFER))
-                  && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
-                // Adjusting bottom side: event falls within BUFFER pixels of bottom side, and between left and right side limits
-                cameraManager.adjustFramingRect(0, 2 * (currentY - lastY));
-                viewfinderView.removeResultText();
-              }     
+                            final int BUFFER = 50;
+                            final int BIG_BUFFER = 60;
+                            if (lastX >= 0) {
+                                // Adjust the size of the viewfinder rectangle. Check if the touch event occurs in the corner areas first, because the regions overlap.
+                                if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
+                                        && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
+                                    // Top left corner: adjust both top and left sides
+                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (lastY - currentY));
+                                    viewfinderView.removeResultText();
+                                } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER))
+                                        && ((currentY <= rect.top + BIG_BUFFER && currentY >= rect.top - BIG_BUFFER) || (lastY <= rect.top + BIG_BUFFER && lastY >= rect.top - BIG_BUFFER))) {
+                                    // Top right corner: adjust both top and right sides
+                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (lastY - currentY));
+                                    viewfinderView.removeResultText();
+                                } else if (((currentX >= rect.left - BIG_BUFFER && currentX <= rect.left + BIG_BUFFER) || (lastX >= rect.left - BIG_BUFFER && lastX <= rect.left + BIG_BUFFER))
+                                        && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
+                                    // Bottom left corner: adjust both bottom and left sides
+                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 2 * (currentY - lastY));
+                                    viewfinderView.removeResultText();
+                                } else if (((currentX >= rect.right - BIG_BUFFER && currentX <= rect.right + BIG_BUFFER) || (lastX >= rect.right - BIG_BUFFER && lastX <= rect.right + BIG_BUFFER))
+                                        && ((currentY <= rect.bottom + BIG_BUFFER && currentY >= rect.bottom - BIG_BUFFER) || (lastY <= rect.bottom + BIG_BUFFER && lastY >= rect.bottom - BIG_BUFFER))) {
+                                    // Bottom right corner: adjust both bottom and right sides
+                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 2 * (currentY - lastY));
+                                    viewfinderView.removeResultText();
+                                } else if (((currentX >= rect.left - BUFFER && currentX <= rect.left + BUFFER) || (lastX >= rect.left - BUFFER && lastX <= rect.left + BUFFER))
+                                        && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
+                                    // Adjusting left side: event falls within BUFFER pixels of left side, and between top and bottom side limits
+                                    cameraManager.adjustFramingRect(2 * (lastX - currentX), 0);
+                                    viewfinderView.removeResultText();
+                                } else if (((currentX >= rect.right - BUFFER && currentX <= rect.right + BUFFER) || (lastX >= rect.right - BUFFER && lastX <= rect.right + BUFFER))
+                                        && ((currentY <= rect.bottom && currentY >= rect.top) || (lastY <= rect.bottom && lastY >= rect.top))) {
+                                    // Adjusting right side: event falls within BUFFER pixels of right side, and between top and bottom side limits
+                                    cameraManager.adjustFramingRect(2 * (currentX - lastX), 0);
+                                    viewfinderView.removeResultText();
+                                } else if (((currentY <= rect.top + BUFFER && currentY >= rect.top - BUFFER) || (lastY <= rect.top + BUFFER && lastY >= rect.top - BUFFER))
+                                        && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
+                                    // Adjusting top side: event falls within BUFFER pixels of top side, and between left and right side limits
+                                    cameraManager.adjustFramingRect(0, 2 * (lastY - currentY));
+                                    viewfinderView.removeResultText();
+                                } else if (((currentY <= rect.bottom + BUFFER && currentY >= rect.bottom - BUFFER) || (lastY <= rect.bottom + BUFFER && lastY >= rect.bottom - BUFFER))
+                                        && ((currentX <= rect.right && currentX >= rect.left) || (lastX <= rect.right && lastX >= rect.left))) {
+                                    // Adjusting bottom side: event falls within BUFFER pixels of bottom side, and between left and right side limits
+                                    cameraManager.adjustFramingRect(0, 2 * (currentY - lastY));
+                                    viewfinderView.removeResultText();
+                                }
+                            }
+                        } catch (NullPointerException e) {
+                            Log.e(TAG, "Framing rect not available", e);
+                        }
+                        v.invalidate();
+                        lastX = currentX;
+                        lastY = currentY;
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        lastX = -1;
+                        lastY = -1;
+                        return true;
+                }
+                return false;
             }
-          } catch (NullPointerException e) {
-            Log.e(TAG, "Framing rect not available", e);
-          }
-          v.invalidate();
-          lastX = currentX;
-          lastY = currentY;
-          return true;
-        case MotionEvent.ACTION_UP:
-          lastX = -1;
-          lastY = -1;
-          return true;
+        });
+
+        isEngineReady = false;
+    }
+
+    private void onRadioBtnClicked(View view) {
+        boolean checked = ((RadioButton) view).isChecked();
+
+        // Check which radio button was clicked
+        switch (view.getId()) {
+            case R.id.radio_locally:
+                if (checked)
+                    whereToPerform = 0;
+                break;
+            case R.id.radio_server:
+                if (checked)
+                    whereToPerform = 1;
+                break;
+            case R.id.radio_ml:
+                if (checked)
+                    whereToPerform = 2;
+                break;
+            case R.id.radio_class:
+                if (checked)
+                    whereToPerform = 3;
+                break;
         }
-        return false;
-      }
-    });
-    
-    isEngineReady = false;
-  }
+    }
 
-  private void onRadioBtnClicked(View view){
-      boolean checked = ((RadioButton) view).isChecked();
+    short getWhereToPerform() {
+        return whereToPerform;
+    }
 
-      // Check which radio button was clicked
-      switch(view.getId()) {
-          case R.id.radio_locally:
-              if (checked)
-                  whereToPerform = 0;
-                  break;
-          case R.id.radio_server:
-              if (checked)
-                  whereToPerform = 1;
-                  break;
-          case R.id.radio_ml:
-              if (checked)
-                  whereToPerform = 2;
-                  break;
-      }
-  }
+    private void trainNetworks() {
+        //network variables
+        String options =
+                "-L " + 0.1 //learning rate
+                        + " -M " + 0 //momentum
+                        + " -N " + 10000 //epoch
+                        + " -V " + 0 //validation
+                        + " -S " + 0 //seed
+                        + " -E " + 0 //error
+                        + " -H " + "3"; //hidden nodes.
+        //e.g. use "3,3" for 2 level hidden layer with 3 nodes
 
-  short getWhereToPerform(){ return whereToPerform; }
+        try {
+            //prepare historical data - BATTERY
+            InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
+            BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
+            Instances trainingsetBattery = new Instances(datafileBattery);
+            datafileBattery.close();
+            mlpBattery = new MultilayerPerceptron();
+            mlpBattery.setOptions(Utils.splitOptions(options));
+            trainNetwork(mlpBattery, trainingsetBattery);
 
-  private void trainNetworks() {
-      //network variables
-      String options =
-              "-L " + 0.1 //learning rate
-                      + " -M " + 0 //momentum
-                      + " -N " + 10000 //epoch
-                      + " -V " + 0 //validation
-                      + " -S " + 0 //seed
-                      + " -E " + 0 //error
-                      + " -H " + "3"; //hidden nodes.
-      //e.g. use "3,3" for 2 level hidden layer with 3 nodes
+            InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
+            BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
+            Instances trainingsetTime = new Instances(datafileTime);
+            datafileTime.close();
+            mlpTime = new MultilayerPerceptron();
+            mlpTime.setOptions(Utils.splitOptions(options));
+            trainNetwork(mlpTime, trainingsetTime);
 
-      try {
-          //prepare historical data - BATTERY
-          InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
-          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
-          Instances trainingsetBattery = new Instances(datafileBattery);
-          datafileBattery.close();
-          mlpBattery = new MultilayerPerceptron();
-          mlpBattery.setOptions(Utils.splitOptions(options));
-          trainNetwork(mlpBattery, trainingsetBattery);
-
-          InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
-          BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
-          Instances trainingsetTime = new Instances(datafileTime);
-          datafileTime.close();
-          mlpTime = new MultilayerPerceptron();
-          mlpTime.setOptions(Utils.splitOptions(options));
-          trainNetwork(mlpTime, trainingsetTime);
-
-          //checkEvaluation(mlpBattery, trainingsetBattery);
-      }
-        catch(Exception ex){
+            //checkEvaluation(mlpBattery, trainingsetBattery);
+        } catch (Exception ex) {
             System.out.println(ex);
         }
     }
 
-  void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+    void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
 
-      trainingset.setClassIndex(trainingset.numAttributes() - 1);
-      //final attribute in a line stands for output
+        trainingset.setClassIndex(trainingset.numAttributes() - 1);
+        //final attribute in a line stands for output
 
-      //network training - battery
-      mlp.buildClassifier(trainingset);
-      System.out.println("Final weights:");
-      System.out.println(mlp);
-  }
+        //network training - battery
+        mlp.buildClassifier(trainingset);
+        System.out.println("Final weights:");
+        System.out.println(mlp);
+    }
 
-  void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
-      //display actual and forecast values
-      System.out.println("\nactual\tprediction");
-      for (int i = 0; i < trainingset.numInstances(); i++) {
-          double actual = trainingset.instance(i).classValue();
-          double prediction =
-                  mlp.distributionForInstance(trainingset.instance(i))[0];
-          System.out.println(actual + "\t" + prediction);
-      }
+    void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+        //display actual and forecast values
+        System.out.println("\nactual\tprediction");
+        for (int i = 0; i < trainingset.numInstances(); i++) {
+            double actual = trainingset.instance(i).classValue();
+            double prediction =
+                    mlp.distributionForInstance(trainingset.instance(i))[0];
+            System.out.println(actual + "\t" + prediction);
+        }
 
-      //success metrics
-      System.out.println("\nSuccess Metrics: ");
-      Evaluation eval = new Evaluation(trainingset);
+        //success metrics
+        System.out.println("\nSuccess Metrics: ");
+        Evaluation eval = new Evaluation(trainingset);
 
-      eval.evaluateModel(mlp, trainingset);
+        eval.evaluateModel(mlp, trainingset);
 
-      //display metrics
-      System.out.println("Correlation: "+eval.correlationCoefficient());
-      System.out.println("MAE: "+eval.meanAbsoluteError());
-      System.out.println("RMSE: "+eval.rootMeanSquaredError());
-      System.out.println("RAE: "+eval.relativeAbsoluteError()+"%");
-      System.out.println("RRSE: "+eval.rootRelativeSquaredError()+"%");
-      System.out.println("Instances: "+eval.numInstances());
+        //display metrics
+        System.out.println("Correlation: " + eval.correlationCoefficient());
+        System.out.println("MAE: " + eval.meanAbsoluteError());
+        System.out.println("RMSE: " + eval.rootMeanSquaredError());
+        System.out.println("RAE: " + eval.relativeAbsoluteError() + "%");
+        System.out.println("RRSE: " + eval.rootRelativeSquaredError() + "%");
+        System.out.println("Instances: " + eval.numInstances());
 
 
 //      eval.crossValidateModel(mlp, trainingset, 4,
@@ -536,15 +549,16 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 //              + "/Correct(%):"
 //              + eval.pctCorrect());
 //      Log.e("Result", "================================================");
-  }
-  void chooseLocationML(){
-     boolean batteryBetterWithServer = chooseLocationML(0);
-     boolean timeBetterWithServer = chooseLocationML(1);
-
-     performOnServerML = batteryBetterWithServer || timeBetterWithServer;
     }
 
-  boolean chooseLocationML(int option){
+    void chooseLocationML() {
+        boolean batteryBetterWithServer = chooseLocationML(0);
+        boolean timeBetterWithServer = chooseLocationML(1);
+
+        performOnServerML = batteryBetterWithServer || timeBetterWithServer;
+    }
+
+    boolean chooseLocationML(int option) {
         //predict sth
         String classString = "";
         if (option == 0)
@@ -563,8 +577,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             if (option == 0) {
                 distributions1 = mlpBattery.distributionForInstance(predictionset.instance(0));
                 distributions2 = mlpBattery.distributionForInstance(predictionset.instance(1));
-            }
-            else {
+            } else {
                 distributions1 = mlpTime.distributionForInstance(predictionset.instance(0));
                 distributions2 = mlpTime.distributionForInstance(predictionset.instance(1));
             }
@@ -591,61 +604,64 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             return "Local";
     }
 
-    boolean getPerformOnServerML(){ return performOnServerML; }
+    boolean getPerformOnServerML() {
+        return performOnServerML;
+    }
 
-    void saveCurrentTimeAndBattery(){
-        prevBattery = getBatteryPercentage()*getBatteryCapacity();
+    void saveCurrentTimeAndBattery() {
+        prevBattery = getBatteryPercentage() * getBatteryCapacity();
         prevTime = System.nanoTime();
     }
-    void displayMsgAboutTask(){
+
+    void displayMsgAboutTask() {
         //TODO: if everything works well, this info should be added to both arff files
         try {
             Rect rect = cameraManager.getFramingRect();
             long currentTime = System.nanoTime();
             Toast toast = Toast.makeText(this, "Prev battery: " + prevBattery
-                    + "\nCurrent battery: " + getBatteryCapacity()*getBatteryPercentage()
-                    + "\nExecution time: "  + (currentTime - prevTime)
+                    + "\nCurrent battery: " + getBatteryCapacity() * getBatteryPercentage()
+                    + "\nExecution time: " + (currentTime - prevTime)
                     + "\nML choice: " + getChosenLocationML()
                     + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
 
             toast.setGravity(Gravity.TOP, 0, 0);
             toast.show();
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-  private Instances initializeDataset(String classString){
+    private Instances initializeDataset(String classString) {
 
-    ArrayList fvWekaAttributes = new ArrayList();
+        ArrayList fvWekaAttributes = new ArrayList();
 
-    Attribute area = new Attribute("area");
-    Attribute current_battery = new Attribute("current_battery");
-    Attribute target = new Attribute("target", (ArrayList)null);
-    Attribute classToPredict = new Attribute(classString);
+        Attribute area = new Attribute("area");
+        Attribute current_battery = new Attribute("current_battery");
+        Attribute target = new Attribute("target", (ArrayList) null);
+        Attribute classToPredict = new Attribute(classString);
 
-    fvWekaAttributes.add(area);
-    fvWekaAttributes.add(current_battery);
-    fvWekaAttributes.add(target);
-    fvWekaAttributes.add(classToPredict);
+        fvWekaAttributes.add(area);
+        fvWekaAttributes.add(current_battery);
+        fvWekaAttributes.add(target);
+        fvWekaAttributes.add(classToPredict);
 
-    Instances testset = new Instances("testset",fvWekaAttributes,0);
+        Instances testset = new Instances("testset", fvWekaAttributes, 0);
 
-    Rect rect = cameraManager.getFramingRect();
-    String targets[] = {"local", "mcc"};
-    for (String s : targets){
-        Instance item = new DenseInstance(4);
-        item.setValue(area, (rect.height()) * (rect.width()));
-        item.setValue(current_battery, (getBatteryPercentage()*getBatteryCapacity()));
-        item.setValue(target, s);
-        item.setValue(classToPredict, -100);
-        testset.add(item);
+        Rect rect = cameraManager.getFramingRect();
+        String targets[] = {"local", "mcc"};
+        for (String s : targets) {
+            Instance item = new DenseInstance(4);
+            item.setValue(area, (rect.height()) * (rect.width()));
+            item.setValue(current_battery, (getBatteryPercentage() * getBatteryCapacity()));
+            item.setValue(target, s);
+            item.setValue(classToPredict, -100);
+            testset.add(item);
+        }
+
+        testset.setClassIndex(testset.numAttributes() - 1);
+
+        return testset;
     }
-
-    testset.setClassIndex(testset.numAttributes() - 1);
-
-    return testset;
-  }
 
     @Override
     protected void onResume() {
