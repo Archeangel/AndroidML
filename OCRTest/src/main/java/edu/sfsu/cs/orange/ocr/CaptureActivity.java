@@ -20,11 +20,13 @@ package edu.sfsu.cs.orange.ocr;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -259,13 +261,13 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private static boolean isFirstLaunch; // True if this is the first time the app is being run
     private static boolean performOnServerML;
     private static short whereToPerform;
-    private static MultilayerPerceptron mlpBattery;
-    private static MultilayerPerceptron mlpTime;
+    private MultilayerPerceptron mlpBattery;
+    private MultilayerPerceptron mlpTime;
 
     private long prevBattery;
     private long prevTime;
-    private static String mlpBatteryFile = "battery.arff";
-    private static String mlpTimeFile = "time.arff";
+    private static final String mlpBatteryFile = "battery.arff";
+    private static final String mlpTimeFile = "time.arff";
 
     Handler getHandler() {
         return handler;
@@ -288,8 +290,23 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         if (isFirstLaunch) {
             setDefaultPreferences();
             //utworzenie pliku z danymi
-            File batteryFile = new File(this.getFilesDir(), mlpBatteryFile);
-            File timeFile = new File(this.getFilesDir(), mlpTimeFile);
+            System.out.println("FIRST LAUNCH");
+            File root = new File(this.getFilesDir(), "mydir");
+            if (!root.exists())
+                root.mkdir();
+
+            File batteryFile = new File(root, mlpBatteryFile);
+            File timeFile = new File(root, mlpTimeFile);
+            try {
+                if (!batteryFile.exists())
+                    batteryFile.createNewFile();
+                if (!timeFile.exists())
+                    timeFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (!batteryFile.exists() || !timeFile.exists())
+                System.out.println("Problem with writing files!!!");
             String batteryContents = "@relation ocrBattery\n" +
                     "\n" +
                     "@attribute area numeric\n" +
@@ -298,7 +315,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                     "@attribute new_battery numeric\n" +
                     "\n" +
                     "@data\n" +
-                    "700000,10000, mcc, 9500";
+                    "700000,10000, mcc, 9500\n";
             String timeContents = "@relation ocrTime\n" +
                     "\n" +
                     "@attribute area numeric\n" +
@@ -307,19 +324,38 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                     "@attribute time numeric\n" +
                     "\n" +
                     "@data\n" +
-                    "700000,100, mcc, 1000";
+                    "700000,100, mcc, 1000\n";
+
+            System.out.println("Battery file path: " + batteryFile.getPath());
+            System.out.println("Battery file name: " + batteryFile.getName());
+            System.out.println("Time file path: " + timeFile.getPath());
+            System.out.println("Time file name: " + timeFile.getName());
+            System.out.println("getFilesDir(): " + getFilesDir().getPath());
+            System.out.println("root: " + root.getPath());
             FileOutputStream outputStream;
             try {
-                outputStream = openFileOutput(batteryFile.getName(), Context.MODE_PRIVATE);
-                outputStream.write(batteryContents.getBytes());
-                outputStream.close();
-                outputStream = openFileOutput(timeFile.getName(), Context.MODE_PRIVATE);
-                outputStream.write(timeContents.getBytes());
-                outputStream.close();
+                FileWriter writer = new FileWriter(batteryFile,true);
+                writer.append(batteryContents);
+                writer.flush();
+                writer.close();
+
+                writer = new FileWriter(timeFile,true);
+                writer.append(timeContents);
+                writer.flush();
+                writer.close();
+
+//                outputStream = openFileOutput(batteryFile.getName(), Context.MODE_PRIVATE);
+//                outputStream.write(batteryContents.getBytes());
+//                outputStream.close();
+//                outputStream = openFileOutput(timeFile.getName(), Context.MODE_PRIVATE);
+//                outputStream.write(timeContents.getBytes());
+//                outputStream.close();
+                System.out.println("files should exist!!!");
+                if (!batteryFile.exists() || !timeFile.exists())
+                    System.out.println("Problem with writing files!!!");
             } catch (Exception e){
                 e.printStackTrace();
             }
-
         }
 
         Window window = getWindow();
@@ -503,21 +539,26 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         return whereToPerform;
     }
 
-    private void trainNetworks() {
-        //network variables
-        String options =
-                "-L " + 0.1 //learning rate
-                        + " -M " + 0 //momentum
-                        + " -N " + 10000 //epoch
-                        + " -V " + 0 //validation
-                        + " -S " + 0 //seed
-                        + " -E " + 0 //error
-                        + " -H " + "3"; //hidden nodes.
-        //e.g. use "3,3" for 2 level hidden layer with 3 nodes
+  private void trainNetworks() {
+        Log.d(TAG, "trainNetworks()");
+      //network variables
+      String options =
+              "-L " + 0.1 //learning rate
+                      + " -M " + 0 //momentum
+                      + " -N " + 10000 //epoch
+                      + " -V " + 0 //validation
+                      + " -S " + 0 //seed
+                      + " -E " + 0 //error
+                      + " -H " + "3"; //hidden nodes.
+      //e.g. use "3,3" for 2 level hidden layer with 3 nodes
 
       try {
+          readInputFile(mlpBatteryFile);
+          readInputFile(mlpTimeFile);
+
           //prepare historical data - BATTERY
-          FileInputStream inputBattery = openFileInput(mlpBatteryFile);
+          String path = getFilesDir() + "/mydir/";
+          FileInputStream inputBattery = new FileInputStream(path+mlpBatteryFile);
 //          inp.write(batteryContents.getBytes());
 //          outputStream.close();
 //
@@ -531,7 +572,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
           //TIME
           //InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
-          FileInputStream inputTime = openFileInput(mlpTimeFile);
+          FileInputStream inputTime = new FileInputStream(path+mlpTimeFile);
           BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
           Instances trainingsetTime = new Instances(datafileTime);
           datafileTime.close();
@@ -539,13 +580,16 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
           mlpTime.setOptions(Utils.splitOptions(options));
           trainNetwork(mlpTime, trainingsetTime);
 
-            //checkEvaluation(mlpBattery, trainingsetBattery);
-        } catch (Exception ex) {
+          //checkEvaluation(mlpBattery, trainingsetBattery);
+      }
+        catch(Exception ex){
+            System.out.println("Expetion in trainNetworks");
             System.out.println(ex);
         }
     }
 
-    void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+  void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+        Log.d(TAG, "trainNetwork for sth");
 
         trainingset.setClassIndex(trainingset.numAttributes() - 1);
         //final attribute in a line stands for output
@@ -556,15 +600,32 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         System.out.println(mlp);
     }
 
-    void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
-        //display actual and forecast values
-        System.out.println("\nactual\tprediction");
-        for (int i = 0; i < trainingset.numInstances(); i++) {
-            double actual = trainingset.instance(i).classValue();
-            double prediction =
-                    mlp.distributionForInstance(trainingset.instance(i))[0];
-            System.out.println(actual + "\t" + prediction);
-        }
+  void readInputFile(String fileName){
+        System.out.println("READ FILE " + fileName);
+        String path = getFilesDir()+"/mydir/"+fileName;
+        System.out.println("PATH TO FILE: "+ path);
+        try {
+          Scanner s = new Scanner(new File(path));
+          while(s.hasNext()){
+              System.out.println(s.nextLine());
+          }
+          s.close();
+      } catch (FileNotFoundException e) {
+            System.out.println("Exception in readInputFile");
+          e.printStackTrace();
+      }
+
+  }
+
+  void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
+      //display actual and forecast values
+      System.out.println("\nactual\tprediction");
+      for (int i = 0; i < trainingset.numInstances(); i++) {
+          double actual = trainingset.instance(i).classValue();
+          double prediction =
+                  mlp.distributionForInstance(trainingset.instance(i))[0];
+          System.out.println(actual + "\t" + prediction);
+      }
 
         //success metrics
         System.out.println("\nSuccess Metrics: ");
@@ -594,11 +655,14 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 //              + "/Correct(%):"
 //              + eval.pctCorrect());
 //      Log.e("Result", "================================================");
-    }
-
-    void chooseLocationML() {
-        boolean batteryBetterWithServer = chooseLocationML(0);
-        boolean timeBetterWithServer = chooseLocationML(1);
+  }
+  void chooseLocationML(){
+     if (mlpTime == null || mlpBattery == null){
+         Log.d(TAG, "there will be trainNetworks() in chooseLocation");
+         trainNetworks();
+     }
+     boolean batteryBetterWithServer = chooseLocationML(0);
+     boolean timeBetterWithServer = chooseLocationML(1);
 
         performOnServerML = batteryBetterWithServer || timeBetterWithServer;
     }
@@ -677,16 +741,27 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             toast.show();
 
             //write to files
-            String batteryContents = (area + " " + prevBattery + " " + getChosenLocationML() + " " + currentBattery);
-            String timeContents = (area + " " + prevBattery + " " + getChosenLocationML() + " " + executionTime);
+            String batteryContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + currentBattery + "\n");
+            String timeContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + executionTime + "\n");
+            System.out.println("New batteryCOntents: " + batteryContents);
+            System.out.println("New timeContents: " + timeContents);
             FileOutputStream outputStream;
             try {
-                outputStream = openFileOutput(mlpBatteryFile, Context.MODE_APPEND);
-                outputStream.write(batteryContents.getBytes());
-                outputStream.close();
-                outputStream = openFileOutput(mlpTimeFile, Context.MODE_APPEND);
-                outputStream.write(timeContents.getBytes());
-                outputStream.close();
+                String path = getFilesDir()+"/mydir/";
+
+                File batteryFile = new File(path, mlpBatteryFile);
+                File timeFile = new File(path, mlpTimeFile);
+
+                FileWriter writer = new FileWriter(batteryFile,true);
+                writer.append(batteryContents);
+                writer.flush();
+                writer.close();
+
+                writer = new FileWriter(timeFile, true);
+                writer.append(timeContents);
+                writer.flush();
+                writer.close();
+
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -761,6 +836,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             // We already have the engine initialized, so just start the camera.
             resumeOCR();
         }
+        trainNetworks();
     }
 
     /**
