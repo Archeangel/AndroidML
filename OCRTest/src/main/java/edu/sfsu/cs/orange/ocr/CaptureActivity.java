@@ -81,6 +81,7 @@ import edu.sfsu.cs.orange.ocr.language.LanguageCodeHelper;
 import edu.sfsu.cs.orange.ocr.language.TranslateAsyncTask;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
+import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
@@ -263,6 +264,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private static short whereToPerform;
     private MultilayerPerceptron mlpBattery;
     private MultilayerPerceptron mlpTime;
+    private J48 treeBattery;
+    private J48 treeTime;
 
     private long prevBattery;
     private long prevTime;
@@ -281,6 +284,41 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         return cameraManager;
     }
 
+    void createDirs(){
+        File root = new File(this.getFilesDir(), "mydir");
+        root.mkdir();
+
+        File batteryFile = new File(root, mlpBatteryFile);
+        File timeFile = new File(root, mlpTimeFile);
+        try {
+            if (!batteryFile.exists())
+                batteryFile.createNewFile();
+            if (!timeFile.exists())
+                timeFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (!batteryFile.exists() || !timeFile.exists())
+            System.out.println("Problem with writing files!!!");
+    }
+
+    String timeToClass(long time){
+        if (time < 9590842909L)
+            return "short";
+        else if (time < 21590842909L)
+            return "medium";
+        else
+            return "long";
+    }
+    String batteryToClass(long battery){
+        if (battery < 1000)
+            return "low";
+        else if (battery < 2000)
+            return "medium";
+        else
+            return "high";
+    }
+
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -291,6 +329,28 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             setDefaultPreferences();
             //utworzenie pliku z danymi
             System.out.println("FIRST LAUNCH");
+            createDirs();
+            String batteryContents = "@relation ocrBattery\n" +
+                    "\n" +
+                    "@attribute area numeric\n" +
+                    "@attribute current_battery numeric\n" +
+                    "@attribute target {local, mcc}\n" +
+                    "@attribute new_battery numeric\n" +
+                    "@attribute new_battery_class {low, medium, high}\n" +
+                    "\n" +
+                    "@data\n" +
+                    "700000,10000, mcc, 9500, " + batteryToClass(9500) + " \n";
+            String timeContents = "@relation ocrTime\n" +
+                    "\n" +
+                    "@attribute area numeric\n" +
+                    "@attribute current_battery numeric\n" +
+                    "@attribute target {local, mcc}\n" +
+                    "@attribute time numeric\n" +
+                    "@attribute time_class {short, medium, long}\n" +
+                    "\n" +
+                    "@data\n" +
+                    "700000,100, mcc, 1000, " + timeToClass(1000) + " \n";
+
             File root = new File(this.getFilesDir(), "mydir");
             if (!root.exists())
                 root.mkdir();
@@ -307,25 +367,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             }
             if (!batteryFile.exists() || !timeFile.exists())
                 System.out.println("Problem with writing files!!!");
-            String batteryContents = "@relation ocrBattery\n" +
-                    "\n" +
-                    "@attribute area numeric\n" +
-                    "@attribute current_battery numeric\n" +
-                    "@attribute target {local, mcc}\n" +
-                    "@attribute new_battery numeric\n" +
-                    "\n" +
-                    "@data\n" +
-                    "700000,10000, mcc, 9500\n";
-            String timeContents = "@relation ocrTime\n" +
-                    "\n" +
-                    "@attribute area numeric\n" +
-                    "@attribute current_battery numeric\n" +
-                    "@attribute target {local, mcc}\n" +
-                    "@attribute time numeric\n" +
-                    "\n" +
-                    "@data\n" +
-                    "700000,100, mcc, 1000\n";
-
             System.out.println("Battery file path: " + batteryFile.getPath());
             System.out.println("Battery file name: " + batteryFile.getName());
             System.out.println("Time file path: " + timeFile.getPath());
@@ -344,12 +385,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                 writer.flush();
                 writer.close();
 
-//                outputStream = openFileOutput(batteryFile.getName(), Context.MODE_PRIVATE);
-//                outputStream.write(batteryContents.getBytes());
-//                outputStream.close();
-//                outputStream = openFileOutput(timeFile.getName(), Context.MODE_PRIVATE);
-//                outputStream.write(timeContents.getBytes());
-//                outputStream.close();
                 System.out.println("files should exist!!!");
                 if (!batteryFile.exists() || !timeFile.exists())
                     System.out.println("Problem with writing files!!!");
@@ -405,6 +440,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             }
         });
         trainNetworks(); //TODO: do osobnego watku
+        trainTrees();
 
         handler = null;
         lastResult = null;
@@ -539,6 +575,65 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         return whereToPerform;
     }
 
+    private Instances getInstancesFromInputData(String fileName, int option){
+        String path = getFilesDir() + "/mydir/";
+        FileInputStream input = null;
+        try {
+            input = new FileInputStream(path+fileName);
+            BufferedReader datafile = new BufferedReader(new InputStreamReader(input));
+            Instances trainingSet = new Instances(datafile);
+            System.out.println("num of atttrs: " + trainingSet.numAttributes());
+            if (option == 0 ) //mlp
+                trainingSet.deleteAttributeAt(trainingSet.numAttributes()-1);
+            else //tree
+                trainingSet.deleteAttributeAt(trainingSet.numAttributes()-2);
+            System.out.println("num of atttrs after: " + trainingSet.numAttributes());
+            datafile.close();
+            return trainingSet;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    private void trainTrees() {
+        Log.d(TAG, "trainTree()");
+        String options[] = {
+                " -U ", // unpruned tree
+                        "-C 0.05",         // confidence threshold for pruning. (Default: 0.25)
+                        "-M 1",            // minimum number of instances per leaf. (Default: 2)
+                        //"-R ",            // use reduced error pruning. No subtree raising is performed.
+                        "-N 3"            // number of folds for reduced error pruning. One fold is used as the pruning set. (Default: 3)
+                        //"-B ",            // Use binary splits for nominal attributes.
+                        //"-S ",            // not perform subtree raising.
+                        //"-L ",            // not clean up after the tree has been built.
+                        //"-A ",            // if set, Laplace smoothing is used for predicted probabilites.
+                        //"-Q "            // The seed for reduced-error pruning.
+                        };
+        try {
+            Instances trainingsetBattery = getInstancesFromInputData(mlpBatteryFile, 1);
+            treeBattery = new J48();
+            treeBattery.setOptions(options);
+            System.out.println("TRAINING SET battery tree: " + trainingsetBattery);
+            trainTree(treeBattery, trainingsetBattery);
+
+            Instances trainingsetTime = getInstancesFromInputData(mlpTimeFile, 1);
+            treeTime = new J48();
+            treeTime.setOptions(options);
+            System.out.println("TRAINING SET time tree: " + trainingsetBattery);
+            trainTree(treeTime, trainingsetTime);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void trainTree(J48 tree, Instances trainingSet) throws Exception {
+        Log.d(TAG, "trainTree for sth");
+        trainingSet.setClassIndex(trainingSet.numAttributes()-1);
+        tree.buildClassifier(trainingSet);
+        System.out.println("Tree training results:");
+        System.out.println(tree);
+    }
+
   private void trainNetworks() {
         Log.d(TAG, "trainNetworks()");
       //network variables
@@ -551,33 +646,22 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                       + " -E " + 0 //error
                       + " -H " + "3"; //hidden nodes.
       //e.g. use "3,3" for 2 level hidden layer with 3 nodes
-
       try {
           readInputFile(mlpBatteryFile);
           readInputFile(mlpTimeFile);
 
           //prepare historical data - BATTERY
-          String path = getFilesDir() + "/mydir/";
-          FileInputStream inputBattery = new FileInputStream(path+mlpBatteryFile);
-//          inp.write(batteryContents.getBytes());
-//          outputStream.close();
-//
-//          InputStream inputBattery = getResources().openRawResource(R.raw.ocr_battery);
-          BufferedReader datafileBattery = new BufferedReader(new InputStreamReader(inputBattery));
-          Instances trainingsetBattery = new Instances(datafileBattery);
-          datafileBattery.close();
+          Instances trainingsetBattery = getInstancesFromInputData(mlpBatteryFile, 0);
           mlpBattery = new MultilayerPerceptron();
           mlpBattery.setOptions(Utils.splitOptions(options));
+          System.out.println("TRAINING SET battery mlp: " + trainingsetBattery);
           trainNetwork(mlpBattery, trainingsetBattery);
 
           //TIME
-          //InputStream inputTime = getResources().openRawResource(R.raw.ocr_time);
-          FileInputStream inputTime = new FileInputStream(path+mlpTimeFile);
-          BufferedReader datafileTime = new BufferedReader(new InputStreamReader(inputTime));
-          Instances trainingsetTime = new Instances(datafileTime);
-          datafileTime.close();
+          Instances trainingsetTime = getInstancesFromInputData(mlpTimeFile, 0);
           mlpTime = new MultilayerPerceptron();
           mlpTime.setOptions(Utils.splitOptions(options));
+          System.out.println("TRAINING SET time mlp: " + trainingsetBattery);
           trainNetwork(mlpTime, trainingsetTime);
 
           //checkEvaluation(mlpBattery, trainingsetBattery);
@@ -613,6 +697,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       } catch (FileNotFoundException e) {
             System.out.println("Exception in readInputFile");
           e.printStackTrace();
+          createDirs();
       }
 
   }
@@ -656,24 +741,67 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 //              + eval.pctCorrect());
 //      Log.e("Result", "================================================");
   }
-  void chooseLocationML(){
+
+  void chooseLocationJ48(){
+        if (treeTime == null || treeBattery == null) {
+            Log.d(TAG, "there will be trainTrees() in chooseLocation");
+            trainTrees();
+        }
+      boolean batteryBetterWithServer = chooseLocationJ48(0);
+      boolean timeBetterWithServer = chooseLocationJ48(1);
+      performOnServerML = batteryBetterWithServer || timeBetterWithServer;
+  }
+  void chooseLocationMLP(){
      if (mlpTime == null || mlpBattery == null){
          Log.d(TAG, "there will be trainNetworks() in chooseLocation");
          trainNetworks();
      }
-     boolean batteryBetterWithServer = chooseLocationML(0);
-     boolean timeBetterWithServer = chooseLocationML(1);
-
-        performOnServerML = batteryBetterWithServer || timeBetterWithServer;
+     boolean batteryBetterWithServer = chooseLocationMLP(0);
+     boolean timeBetterWithServer = chooseLocationMLP(1);
+     performOnServerML = batteryBetterWithServer || timeBetterWithServer;
+    }
+    String returnClassString(int option){
+        if (option == 0)
+            return "new_battery";
+        else
+            return "time";
     }
 
-    boolean chooseLocationML(int option) {
+    boolean chooseLocationJ48(int option) {
+        String classString = returnClassString(option);
+        Instances predictionset = initializeDataset(classString);
+        String firstInstanceString = predictionset.instance(0).toString();
+        String secondInstanceString = predictionset.instance(1).toString();
+
+        double[] distributions1 = new double[0];
+        double[] distributions2 = new double[0];
+
+        try {
+            if (option == 0) {
+                distributions1 = treeBattery.distributionForInstance(predictionset.instance(0));
+                distributions2 = treeBattery.distributionForInstance(predictionset.instance(1));
+            } else {
+                distributions1 = treeTime.distributionForInstance(predictionset.instance(0));
+                distributions2 = treeTime.distributionForInstance(predictionset.instance(1));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Prediction for " + firstInstanceString + ":");
+        for (double d : distributions1) {
+            System.out.println("-----> " + d + "\t");
+        }
+        System.out.println("Prediction for " + secondInstanceString + ":");
+        for (double d : distributions2) {
+            System.out.println("-----> " + d + "\t");
+        }
+
+        return distributions1[0] > distributions2[0];
+    }
+    boolean chooseLocationMLP(int option) {
         //predict sth
-        String classString = "";
-        if (option == 0)
-            classString = "new_battery";
-        else
-            classString = "time";
+        String classString = returnClassString(option);
 
         Instances predictionset = initializeDataset(classString);
         String firstInstanceString = predictionset.instance(0).toString();
@@ -741,8 +869,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             toast.show();
 
             //write to files
-            String batteryContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + currentBattery + "\n");
-            String timeContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + executionTime + "\n");
+            String batteryContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + currentBattery + ", " + batteryToClass(currentBattery) +"\n");
+            String timeContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + executionTime + ", " + timeToClass(currentTime) + "\n");
             System.out.println("New batteryCOntents: " + batteryContents);
             System.out.println("New timeContents: " + timeContents);
             FileOutputStream outputStream;
@@ -836,7 +964,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             // We already have the engine initialized, so just start the camera.
             resumeOCR();
         }
-        trainNetworks();
+        File root = new File(this.getFilesDir(), "mydir");
+        if (!root.exists()) {
+            trainNetworks();
+            trainTrees();
+        }
     }
 
     /**

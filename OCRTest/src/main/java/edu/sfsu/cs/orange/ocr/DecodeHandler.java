@@ -17,8 +17,6 @@
 
 package edu.sfsu.cs.orange.ocr;
 
-import edu.sfsu.cs.orange.ocr.BeepManager;
-
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.vision.v1.Vision;
@@ -33,17 +31,12 @@ import com.googlecode.leptonica.android.Pixa;
 import com.googlecode.leptonica.android.ReadFile;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
-import edu.sfsu.cs.orange.ocr.CaptureActivity;
-import edu.sfsu.cs.orange.ocr.R;
-
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -153,22 +146,31 @@ final class DecodeHandler extends Handler {
                 break;
             case R.id.ocr_decode:
                 if (activity.getWhereToPerform() == 2) {
-                    activity.chooseLocationML();
+                    activity.chooseLocationMLP();
                     if (activity.getPerformOnServerML()) {
                         performOcrWithGoogleVision(message);
                     } else {
                         ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                     }
+                } else if (activity.getWhereToPerform() == 3) {
+                    activity.chooseLocationJ48();
+                    if (activity.getPerformOnServerML()){
+                        if (activity.getPerformOnServerML()) {
+                            performOcrWithGoogleVision(message);
+                        } else {
+                            ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+                        }
+                    }
+//                    int classification = SimpleClassificator.classify(message.arg1, message.arg2, activity.getBatteryPercentage());
+//                    if (classification == 1) {
+//                        performOcrWithGoogleVision(message);
+//                    } else {
+//                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+//                    }
                 } else if (activity.getWhereToPerform() == 1) {
                     performOcrWithGoogleVision(message);
-                } else if (activity.getWhereToPerform() == 3) {
-                    int classification = SimpleClassificator.classify(message.arg1, message.arg2, activity.getBatteryPercentage());
-                    if (classification == 1) {
-                        performOcrWithGoogleVision(message);
-                    } else {
-                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
-                    }
-                } else {
+                }
+                else {
                     ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                 }
                 break;
