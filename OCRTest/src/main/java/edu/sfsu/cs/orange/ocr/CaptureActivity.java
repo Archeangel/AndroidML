@@ -285,6 +285,27 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
 
     void createDirs(){
+        String batteryContents = "@relation ocrBattery\n" +
+                "\n" +
+                "@attribute area numeric\n" +
+                "@attribute current_battery numeric\n" +
+                "@attribute target {local, mcc}\n" +
+                "@attribute new_battery numeric\n" +
+                "@attribute new_battery_class {low, medium, high}\n" +
+                "\n" +
+                "@data\n" +
+                "700000,10000, mcc, 9500, " + batteryToClass(9500) + " \n";
+        String timeContents = "@relation ocrTime\n" +
+                "\n" +
+                "@attribute area numeric\n" +
+                "@attribute current_battery numeric\n" +
+                "@attribute target {local, mcc}\n" +
+                "@attribute time numeric\n" +
+                "@attribute time_class {short, medium, long}\n" +
+                "\n" +
+                "@data\n" +
+                "700000,100, mcc, 1000, " + timeToClass(1000) + " \n";
+
         File root = new File(this.getFilesDir(), "mydir");
         root.mkdir();
 
@@ -300,6 +321,28 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         }
         if (!batteryFile.exists() || !timeFile.exists())
             System.out.println("Problem with writing files!!!");
+
+        System.out.println("Battery file path: " + batteryFile.getPath());
+        System.out.println("Time file path: " + timeFile.getPath());
+        System.out.println("getFilesDir(): " + getFilesDir().getPath());
+        System.out.println("root: " + root.getPath());
+        try {
+            FileWriter writer = new FileWriter(batteryFile,true);
+            writer.append(batteryContents);
+            writer.flush();
+            writer.close();
+
+            writer = new FileWriter(timeFile,true);
+            writer.append(timeContents);
+            writer.flush();
+            writer.close();
+
+            System.out.println("files should exist!!!");
+            if (!batteryFile.exists() || !timeFile.exists())
+                System.out.println("Problem with writing files!!!");
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     String timeToClass(long time){
@@ -330,67 +373,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             //utworzenie pliku z danymi
             System.out.println("FIRST LAUNCH");
             createDirs();
-            String batteryContents = "@relation ocrBattery\n" +
-                    "\n" +
-                    "@attribute area numeric\n" +
-                    "@attribute current_battery numeric\n" +
-                    "@attribute target {local, mcc}\n" +
-                    "@attribute new_battery numeric\n" +
-                    "@attribute new_battery_class {low, medium, high}\n" +
-                    "\n" +
-                    "@data\n" +
-                    "700000,10000, mcc, 9500, " + batteryToClass(9500) + " \n";
-            String timeContents = "@relation ocrTime\n" +
-                    "\n" +
-                    "@attribute area numeric\n" +
-                    "@attribute current_battery numeric\n" +
-                    "@attribute target {local, mcc}\n" +
-                    "@attribute time numeric\n" +
-                    "@attribute time_class {short, medium, long}\n" +
-                    "\n" +
-                    "@data\n" +
-                    "700000,100, mcc, 1000, " + timeToClass(1000) + " \n";
-
-            File root = new File(this.getFilesDir(), "mydir");
-            if (!root.exists())
-                root.mkdir();
-
-            File batteryFile = new File(root, mlpBatteryFile);
-            File timeFile = new File(root, mlpTimeFile);
-            try {
-                if (!batteryFile.exists())
-                    batteryFile.createNewFile();
-                if (!timeFile.exists())
-                    timeFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (!batteryFile.exists() || !timeFile.exists())
-                System.out.println("Problem with writing files!!!");
-            System.out.println("Battery file path: " + batteryFile.getPath());
-            System.out.println("Battery file name: " + batteryFile.getName());
-            System.out.println("Time file path: " + timeFile.getPath());
-            System.out.println("Time file name: " + timeFile.getName());
-            System.out.println("getFilesDir(): " + getFilesDir().getPath());
-            System.out.println("root: " + root.getPath());
-            FileOutputStream outputStream;
-            try {
-                FileWriter writer = new FileWriter(batteryFile,true);
-                writer.append(batteryContents);
-                writer.flush();
-                writer.close();
-
-                writer = new FileWriter(timeFile,true);
-                writer.append(timeContents);
-                writer.flush();
-                writer.close();
-
-                System.out.println("files should exist!!!");
-                if (!batteryFile.exists() || !timeFile.exists())
-                    System.out.println("Problem with writing files!!!");
-            } catch (Exception e){
-                e.printStackTrace();
-            }
         }
 
         Window window = getWindow();
@@ -582,12 +564,12 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             input = new FileInputStream(path+fileName);
             BufferedReader datafile = new BufferedReader(new InputStreamReader(input));
             Instances trainingSet = new Instances(datafile);
-            System.out.println("num of atttrs: " + trainingSet.numAttributes());
+            //System.out.println("num of atttrs: " + trainingSet.numAttributes());
             if (option == 0 ) //mlp
                 trainingSet.deleteAttributeAt(trainingSet.numAttributes()-1);
             else //tree
                 trainingSet.deleteAttributeAt(trainingSet.numAttributes()-2);
-            System.out.println("num of atttrs after: " + trainingSet.numAttributes());
+            //System.out.println("num of atttrs after: " + trainingSet.numAttributes());
             datafile.close();
             return trainingSet;
         } catch (Exception e) {
@@ -674,11 +656,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   void trainNetwork(MultilayerPerceptron mlp, Instances trainingset) throws Exception {
         Log.d(TAG, "trainNetwork for sth");
-
         trainingset.setClassIndex(trainingset.numAttributes() - 1);
-        //final attribute in a line stands for output
-
-        //network training - battery
         mlp.buildClassifier(trainingset);
         System.out.println("Final weights:");
         System.out.println(mlp);
@@ -699,7 +677,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
           e.printStackTrace();
           createDirs();
       }
-
   }
 
   void checkEvaluation(MultilayerPerceptron mlp, Instances trainingset) throws Exception {

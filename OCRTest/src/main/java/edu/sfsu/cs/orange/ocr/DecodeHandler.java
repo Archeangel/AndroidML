@@ -154,12 +154,10 @@ final class DecodeHandler extends Handler {
                     }
                 } else if (activity.getWhereToPerform() == 3) {
                     activity.chooseLocationJ48();
-                    if (activity.getPerformOnServerML()){
-                        if (activity.getPerformOnServerML()) {
-                            performOcrWithGoogleVision(message);
-                        } else {
-                            ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
-                        }
+                    if (activity.getPerformOnServerML()) {
+                        performOcrWithGoogleVision(message);
+                    } else {
+                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                     }
 //                    int classification = SimpleClassificator.classify(message.arg1, message.arg2, activity.getBatteryPercentage());
 //                    if (classification == 1) {
