@@ -267,10 +267,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     private J48 treeBattery;
     private J48 treeTime;
 
-    private long prevBattery;
+    private double prevBattery;
     private long prevTime;
     private static final String mlpBatteryFile = "battery.arff";
     private static final String mlpTimeFile = "time.arff";
+    private static final String OCR_DIR = "OCRTestDir";
 
     Handler getHandler() {
         return handler;
@@ -282,6 +283,14 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     CameraManager getCameraManager() {
         return cameraManager;
+    }
+
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
     void createDirs(){
@@ -306,7 +315,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                 "@data\n" +
                 "700000,100, mcc, 1000, " + timeToClass(1000) + " \n";
 
-        File root = new File(this.getFilesDir(), "mydir");
+        File root;
+        root = new File(this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), OCR_DIR);
+        //root = new File(this.getFilesDir(), OCR_DIR);
         root.mkdir();
 
         File batteryFile = new File(root, mlpBatteryFile);
@@ -324,7 +335,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
         System.out.println("Battery file path: " + batteryFile.getPath());
         System.out.println("Time file path: " + timeFile.getPath());
-        System.out.println("getFilesDir(): " + getFilesDir().getPath());
+        System.out.println("getFilesDir(): " + (getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)).getPath());
         System.out.println("root: " + root.getPath());
         try {
             FileWriter writer = new FileWriter(batteryFile,true);
@@ -353,10 +364,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         else
             return "long";
     }
-    String batteryToClass(long battery){
-        if (battery < 1000)
+    String batteryToClass(double battery){
+        if (battery < 80000)
             return "low";
-        else if (battery < 2000)
+        else if (battery < 200000)
             return "medium";
         else
             return "high";
@@ -365,7 +376,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-
         checkFirstLaunch();
 
         if (isFirstLaunch) {
@@ -558,7 +568,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
 
     private Instances getInstancesFromInputData(String fileName, int option){
-        String path = getFilesDir() + "/mydir/";
+        String path = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) + "/"+OCR_DIR+"/";
         FileInputStream input = null;
         try {
             input = new FileInputStream(path+fileName);
@@ -629,6 +639,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
                       + " -H " + "3"; //hidden nodes.
       //e.g. use "3,3" for 2 level hidden layer with 3 nodes
       try {
+          File root = new File(this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), OCR_DIR);
+          if (!root.exists())
+              createDirs();
           readInputFile(mlpBatteryFile);
           readInputFile(mlpTimeFile);
 
@@ -664,7 +677,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   void readInputFile(String fileName){
         System.out.println("READ FILE " + fileName);
-        String path = getFilesDir()+"/mydir/"+fileName;
+        String path = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)+"/"+OCR_DIR+"/"+fileName;
         System.out.println("PATH TO FILE: "+ path);
         try {
           Scanner s = new Scanner(new File(path));
@@ -823,7 +836,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
 
     void saveCurrentTimeAndBattery(){
-        prevBattery = getBatteryCurrentEnergy(); //getBatteryPercentage()*getBatteryCapacity();
+        prevBattery = getBatteryPercentage()*getBatteryCapacity();
         prevTime = System.nanoTime();
     }
 
@@ -833,11 +846,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             Rect rect = cameraManager.getFramingRect();
             long currentTime = System.nanoTime();
             long area = rect.height() * rect.width();
-            long currentBattery = getBatteryCurrentEnergy();
+            double currentBattery = getBatteryCapacity()*getBatteryPercentage();
 
             long executionTime = currentTime - prevTime;
             Toast toast = Toast.makeText(this, "Prev battery: " + prevBattery
-                    + "\nBattery delta: " + (getBatteryCurrentEnergy() - prevBattery) //getBatteryCapacity()*getBatteryPercentage()
+                    + "\nBattery delta: " + (prevBattery - currentBattery)
                     + "\nExecution time: "  + (currentTime - prevTime)
                     + "\nML choice: " + getChosenLocationML()
                     + "\nPicture area: " + (rect.height() * rect.width()), Toast.LENGTH_LONG);
@@ -847,12 +860,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
             //write to files
             String batteryContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + currentBattery + ", " + batteryToClass(currentBattery) +"\n");
-            String timeContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + executionTime + ", " + timeToClass(currentTime) + "\n");
+            String timeContents = (area + ", " + prevBattery + ", " + getChosenLocationML() + ", " + executionTime + ", " + timeToClass(executionTime) + "\n");
             System.out.println("New batteryCOntents: " + batteryContents);
             System.out.println("New timeContents: " + timeContents);
-            FileOutputStream outputStream;
             try {
-                String path = getFilesDir()+"/mydir/";
+                String path = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)+"/"+OCR_DIR+"/";
 
                 File batteryFile = new File(path, mlpBatteryFile);
                 File timeFile = new File(path, mlpTimeFile);
@@ -897,14 +909,13 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     for (String s : targets){
         Instance item = new DenseInstance(4);
         item.setValue(area, (rect.height()) * (rect.width()));
-        item.setValue(current_battery, (getBatteryCurrentEnergy()));//getBatteryPercentage()*getBatteryCapacity()));
+        item.setValue(current_battery, (getBatteryPercentage()*getBatteryCapacity()));
         item.setValue(target, s);
         item.setValue(classToPredict, -100);
         testset.add(item);
     }
 
         testset.setClassIndex(testset.numAttributes() - 1);
-
         return testset;
     }
 
@@ -941,7 +952,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             // We already have the engine initialized, so just start the camera.
             resumeOCR();
         }
-        File root = new File(this.getFilesDir(), "mydir");
+        File root = new File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), OCR_DIR);
         if (!root.exists()) {
             trainNetworks();
             trainTrees();
