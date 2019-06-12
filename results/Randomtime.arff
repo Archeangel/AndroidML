@@ -1,0 +1,35 @@
+@relation ocrTime
+
+@attribute area numeric
+@attribute current_battery numeric
+@attribute target {local, mcc}
+@attribute time numeric
+@attribute time_class {short, medium, long}
+
+@data
+700000,100, mcc, 1000, short 
+72118, 108000.0, local, 1765851926, short
+72118, 108000.0, local, 4307245363, short
+72118, 105600.0, mcc, 4696247863, short
+72118, 105600.0, local, 3840085728, short
+72118, 105600.0, local, 6316658331, short
+354040, 100800.0, local, 6697904060, short
+354040, 100800.0, local, 7925801507, short
+354040, 100800.0, mcc, 11472546037, medium
+308880, 93600.0, mcc, 36259163163, long
+348660, 88800.0, local, 7648863903, short
+348660, 88800.0, local, 9684803850, medium
+497260, 86400.0, mcc, 14983852598, medium
+789748, 81600.0, mcc, 14732454369, medium
+789748, 79200.0, local, 8531541507, short
+789748, 79200.0, local, 10016561142, medium
+789748, 79200.0, local, 19980655252, medium
+789748, 79200.0, local, 21999466137, long
+789748, 76800.0, local, 14929342755, medium
+789748, 76800.0, local, 17114640931, medium
+789748, 76800.0, local, 30419832749, long
+789748, 76800.0, local, 32504483269, long
+789748, 69600.0, mcc, 14577646452, medium
+243402, 67200.0, mcc, 9258621871, short
+359294, 57600.0, mcc, 9795211558, medium
+307700, 55200.0, mcc, 6841919529, short

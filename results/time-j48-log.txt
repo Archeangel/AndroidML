@@ -1,0 +1,49 @@
+Confusion matrix
+=== Confusion Matrix ===
+
+ a b c   <-- classified as
+ 1 0 0 | a = short
+ 3 0 0 | b = medium
+ 0 0 0 | c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+ a b c   <-- classified as
+ 1 0 0 | a = short
+ 6 0 0 | b = medium
+ 0 0 0 | c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+ a b c   <-- classified as
+ 1 0 0 | a = short
+ 9 0 0 | b = medium
+ 0 0 0 | c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+  a  b  c   <-- classified as
+  1  0  0 |  a = short
+ 13  0  0 |  b = medium
+  0  0  0 |  c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+ a b c   <-- classified as
+ 0 0 5 | a = short
+ 9 2 4 | b = medium
+ 0 0 0 | c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+  a  b  c   <-- classified as
+  9  0  0 |  a = short
+ 15  0  0 |  b = medium
+  0  0  0 |  c = long
+Confusion matrix
+=== Confusion Matrix ===
+
+  a  b  c   <-- classified as
+ 13  0  0 |  a = short
+ 15  0  0 |  b = medium
+  0  0  0 |  c = long
