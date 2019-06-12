@@ -42,6 +42,7 @@ import android.widget.Toast;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Class to send bitmap data for OCR.
@@ -147,28 +148,41 @@ final class DecodeHandler extends Handler {
             case R.id.ocr_decode:
                 if (activity.getWhereToPerform() == 2) {
                     activity.chooseLocationMLP();
-                    if (activity.getPerformOnServerML()) {
+                    if (activity.getPerformOnServer()) {
                         performOcrWithGoogleVision(message);
                     } else {
                         ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                     }
                 } else if (activity.getWhereToPerform() == 3) {
                     activity.chooseLocationJ48();
-                    if (activity.getPerformOnServerML()) {
+                    if (activity.getPerformOnServer()) {
                         performOcrWithGoogleVision(message);
                     } else {
                         ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                     }
-//                    int classification = SimpleClassificator.classify(message.arg1, message.arg2, activity.getBatteryPercentage());
-//                    if (classification == 1) {
-//                        performOcrWithGoogleVision(message);
-//                    } else {
-//                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
-//                    }
+
                 } else if (activity.getWhereToPerform() == 1) {
                     performOcrWithGoogleVision(message);
-                }
-                else {
+                } else if (activity.getWhereToPerform() == 4) {
+                    Random random = new Random();
+                    int result = random.nextInt(2);
+                    if (result == 1) {
+                        activity.setPerformOnServer(true);
+                        performOcrWithGoogleVision(message);
+                    } else {
+                        activity.setPerformOnServer(false);
+                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+                    }
+                } else if (activity.getWhereToPerform() == 5) {
+                    int classification = SimpleClassificator.classify(message.arg1, message.arg2, activity.getBatteryPercentage());
+                    if (classification == 1) {
+                        activity.setPerformOnServer(true);
+                        performOcrWithGoogleVision(message);
+                    } else {
+                        activity.setPerformOnServer(false);
+                        ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
+                    }
+                } else {
                     ocrDecode((byte[]) message.obj, message.arg1, message.arg2);
                 }
                 break;

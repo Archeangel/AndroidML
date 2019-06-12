@@ -16,30 +16,13 @@
  */
 package edu.sfsu.cs.orange.ocr;
 
-import edu.sfsu.cs.orange.ocr.CaptureActivity;
-import edu.sfsu.cs.orange.ocr.R;
 import edu.sfsu.cs.orange.ocr.camera.CameraManager;
-import edu.sfsu.cs.orange.ocr.OcrResult;
 
-import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
-import android.widget.ImageView;
 import android.widget.Toast;
-
-import com.google.api.client.extensions.android.json.AndroidJsonFactory;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.services.vision.v1.Vision;
-import com.google.api.services.vision.v1.VisionRequestInitializer;
-import com.google.api.services.vision.v1.model.AnnotateImageRequest;
-import com.google.api.services.vision.v1.model.BatchAnnotateImagesRequest;
-import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
-import com.google.api.services.vision.v1.model.Feature;
-import com.google.api.services.vision.v1.model.TextAnnotation;
-
-import java.util.Arrays;
 
 /**
  * This class handles all the messaging which comprises the state machine for capture.
@@ -134,7 +117,7 @@ final class CaptureActivityHandler extends Handler {
         Toast toast = Toast.makeText(activity.getBaseContext(), "OCR failed. Please try again."
                 + "Battery lvl:" +activity.getBatteryPercentage()
                 + "Battery capacity:" +activity.getBatteryCapacity()
-                + "ML choice: " + activity.getChosenLocationML(), Toast.LENGTH_LONG);
+                + "ML choice: " + activity.getChosenLocation(), Toast.LENGTH_LONG);
 
         toast.setGravity(Gravity.TOP, 0, 0);
         toast.show();

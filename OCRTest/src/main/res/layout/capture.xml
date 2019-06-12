@@ -215,7 +215,7 @@
              android:layout_marginBottom="8dip"
              android:scaleType="center" />
 
-    <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    <RadioGroup
         android:id="@+id/radioGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -231,19 +231,38 @@
           android:id="@+id/radio_server"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
-          android:text="Server" />
+          android:text="MCC" />
 
       <RadioButton
           android:id="@+id/radio_ml"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
-          android:text="ML" />
+          android:text="MLP" />
 
       <RadioButton
           android:id="@+id/radio_class"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
-          android:text="Decision Tree" />
+          android:text="Tree" />
+
+      <RadioButton
+          android:id="@+id/randomBtn"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Random" />
+
+      <RadioButton
+          android:id="@+id/fixedBtn"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Fixed" />
+
+      <Button
+          android:id="@+id/Eval"
+          android:layout_width="366dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Eval" />
     </RadioGroup>
 
 
